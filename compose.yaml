@@ -1,0 +1,43 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: notextra-postgres
+    environment:
+      POSTGRES_DB: notextra
+      POSTGRES_USER: notextra
+      POSTGRES_PASSWORD: notextra
+    ports:
+      - "5432:5432"
+    volumes:
+      - notextra-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U notextra -d notextra"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    container_name: notextra-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: notextra
+      MINIO_ROOT_PASSWORD: notextraminio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - notextra-minio-data:/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: notextra-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - notextra-redis-data:/data
+
+volumes:
+  notextra-postgres-data:
+  notextra-minio-data:
+  notextra-redis-data:
