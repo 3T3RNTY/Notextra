@@ -2,9 +2,9 @@ package com.notextra.generation;
 
 import org.springframework.modulith.ApplicationModule;
 
-/**
- * Orchestrates AI jobs to produce new notes, presentations, transcripts, and exports.
- */
-@ApplicationModule(displayName = "Generation")
+@ApplicationModule(
+	displayName = "Generation",
+	allowedDependencies = {"notes", "media", "ai"}
+)
 public class GenerationModule {
 }
