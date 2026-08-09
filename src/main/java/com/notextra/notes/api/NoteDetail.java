@@ -11,6 +11,7 @@ public record NoteDetail(
 	String content,
 	NoteStatus status,
 	List<UUID> attachmentIds,
+	List<NoteTag> tags,
 	Instant createdAt,
 	Instant updatedAt
 ) {

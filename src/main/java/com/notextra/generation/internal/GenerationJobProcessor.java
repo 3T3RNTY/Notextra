@@ -8,16 +8,15 @@ import com.notextra.ai.api.AiService;
 import com.notextra.ai.api.AiTaskType;
 import com.notextra.generation.api.GenerationJobCompleted;
 import com.notextra.generation.api.GenerationJobStatus;
+import com.notextra.generation.api.GenerationJobStatusChanged;
 import com.notextra.generation.api.GenerationOutputType;
 import com.notextra.media.api.MediaApi;
 import com.notextra.notes.api.NoteDetail;
 import com.notextra.notes.api.NotesApi;
-import com.notextra.shared.web.ResourceNotFoundException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,18 +49,16 @@ class GenerationJobProcessor {
 		this.objectMapper = objectMapper;
 	}
 
-	@Async
-	void processAsync(UUID jobId) {
-		process(jobId);
-	}
-
 	@Transactional
 	void process(UUID jobId) {
-		var job = generationJobRepository.findById(jobId)
-			.orElseThrow(() -> new ResourceNotFoundException("Generation job not found"));
+		var job = generationJobRepository.findById(jobId).orElse(null);
+		if (job == null) {
+			return;
+		}
 
 		job.setStatus(GenerationJobStatus.PROCESSING);
 		generationJobRepository.save(job);
+		publishStatus(job);
 
 		try {
 			List<String> sourceTexts = collectSourceTexts(job);
@@ -77,6 +74,7 @@ class GenerationJobProcessor {
 			job.setResultMediaId(result.mediaId());
 			job.setStatus(GenerationJobStatus.COMPLETED);
 			generationJobRepository.save(job);
+			publishStatus(job);
 
 			events.publishEvent(new GenerationJobCompleted(
 				job.getId(),
@@ -89,7 +87,19 @@ class GenerationJobProcessor {
 			job.setStatus(GenerationJobStatus.FAILED);
 			job.setErrorMessage(ex.getMessage());
 			generationJobRepository.save(job);
+			publishStatus(job);
 		}
+	}
+
+	private void publishStatus(GenerationJobEntity job) {
+		events.publishEvent(new GenerationJobStatusChanged(
+			job.getId(),
+			job.getOwnerId(),
+			job.getStatus(),
+			job.getResultNoteId(),
+			job.getResultMediaId(),
+			job.getErrorMessage()
+		));
 	}
 
 	private List<String> collectSourceTexts(GenerationJobEntity job) {

@@ -13,8 +13,11 @@ import com.notextra.shared.web.ForbiddenException;
 import com.notextra.shared.web.ResourceNotFoundException;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Service
 class GenerationService {
@@ -22,21 +25,24 @@ class GenerationService {
 	private final GenerationJobRepository generationJobRepository;
 	private final NotesApi notesApi;
 	private final MediaApi mediaApi;
-	private final GenerationJobProcessor jobProcessor;
+	private final GenerationJobQueue jobQueue;
 	private final ObjectMapper objectMapper;
+	private final boolean memoryQueue;
 
 	GenerationService(
 		GenerationJobRepository generationJobRepository,
 		NotesApi notesApi,
 		MediaApi mediaApi,
-		GenerationJobProcessor jobProcessor,
-		ObjectMapper objectMapper
+		GenerationJobQueue jobQueue,
+		ObjectMapper objectMapper,
+		@Value("${notextra.generation.queue:redis}") String queueMode
 	) {
 		this.generationJobRepository = generationJobRepository;
 		this.notesApi = notesApi;
 		this.mediaApi = mediaApi;
-		this.jobProcessor = jobProcessor;
+		this.jobQueue = jobQueue;
 		this.objectMapper = objectMapper;
+		this.memoryQueue = "memory".equalsIgnoreCase(queueMode);
 	}
 
 	@Transactional
@@ -51,9 +57,34 @@ class GenerationService {
 			writeIds(request.sourceNoteIds()),
 			writeIds(request.sourceMediaIds())
 		);
-		generationJobRepository.save(job);
-		jobProcessor.processAsync(job.getId());
+		generationJobRepository.saveAndFlush(job);
+		if (memoryQueue) {
+			jobQueue.enqueue(job.getId());
+			generationJobRepository.findById(job.getId()).ifPresent(updated -> {
+				job.setStatus(updated.getStatus());
+				job.setResultNoteId(updated.getResultNoteId());
+				job.setResultMediaId(updated.getResultMediaId());
+				job.setErrorMessage(updated.getErrorMessage());
+			});
+		}
+		else {
+			enqueueAfterCommit(job.getId());
+		}
 		return toDetail(job);
+	}
+
+	private void enqueueAfterCommit(UUID jobId) {
+		if (TransactionSynchronizationManager.isSynchronizationActive()) {
+			TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+				@Override
+				public void afterCommit() {
+					jobQueue.enqueue(jobId);
+				}
+			});
+		}
+		else {
+			jobQueue.enqueue(jobId);
+		}
 	}
 
 	@Transactional(readOnly = true)

@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -28,8 +29,12 @@ class NoteController {
 	}
 
 	@GetMapping
-	List<NoteDetail> list() {
-		return notesService.listForCurrentUser();
+	List<NoteDetail> list(
+		@RequestParam(required = false) String q,
+		@RequestParam(required = false) UUID tagId,
+		@RequestParam(required = false) UUID collectionId
+	) {
+		return notesService.listForCurrentUser(q, tagId, collectionId);
 	}
 
 	@PostMapping
@@ -57,5 +62,15 @@ class NoteController {
 	@PostMapping("/{noteId}/attachments/{mediaAssetId}")
 	NoteDetail attachMedia(@PathVariable UUID noteId, @PathVariable UUID mediaAssetId) {
 		return notesService.attachMedia(noteId, mediaAssetId);
+	}
+
+	@PostMapping("/{noteId}/tags/{tagId}")
+	NoteDetail attachTag(@PathVariable UUID noteId, @PathVariable UUID tagId) {
+		return notesService.attachTag(noteId, tagId);
+	}
+
+	@DeleteMapping("/{noteId}/tags/{tagId}")
+	NoteDetail detachTag(@PathVariable UUID noteId, @PathVariable UUID tagId) {
+		return notesService.detachTag(noteId, tagId);
 	}
 }

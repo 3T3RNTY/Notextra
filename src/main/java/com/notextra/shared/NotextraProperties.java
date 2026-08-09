@@ -19,7 +19,8 @@ public record NotextraProperties(
 
 	public record Security(
 		String jwtSecret,
-		long jwtExpirationMs
+		long jwtExpirationMs,
+		long refreshExpirationMs
 	) {
 	}
 

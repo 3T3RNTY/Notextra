@@ -1,4 +1,4 @@
-CREATE TABLE identity.users (
+CREATE TABLE IF NOT EXISTS identity.users (
     id UUID PRIMARY KEY,
     email VARCHAR(255) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
@@ -6,7 +6,7 @@ CREATE TABLE identity.users (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE notes.notes (
+CREATE TABLE IF NOT EXISTS notes.notes (
     id UUID PRIMARY KEY,
     owner_id UUID NOT NULL REFERENCES identity.users (id),
     title VARCHAR(500) NOT NULL,
@@ -16,15 +16,15 @@ CREATE TABLE notes.notes (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_notes_owner ON notes.notes (owner_id);
+CREATE INDEX IF NOT EXISTS idx_notes_owner ON notes.notes (owner_id);
 
-CREATE TABLE notes.note_attachments (
+CREATE TABLE IF NOT EXISTS notes.note_attachments (
     note_id UUID NOT NULL REFERENCES notes.notes (id) ON DELETE CASCADE,
     media_asset_id UUID NOT NULL,
     PRIMARY KEY (note_id, media_asset_id)
 );
 
-CREATE TABLE media.media_assets (
+CREATE TABLE IF NOT EXISTS media.media_assets (
     id UUID PRIMARY KEY,
     owner_id UUID NOT NULL REFERENCES identity.users (id),
     type VARCHAR(50) NOT NULL,
@@ -35,9 +35,9 @@ CREATE TABLE media.media_assets (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_media_owner ON media.media_assets (owner_id);
+CREATE INDEX IF NOT EXISTS idx_media_owner ON media.media_assets (owner_id);
 
-CREATE TABLE generation.generation_jobs (
+CREATE TABLE IF NOT EXISTS generation.generation_jobs (
     id UUID PRIMARY KEY,
     owner_id UUID NOT NULL REFERENCES identity.users (id),
     output_type VARCHAR(50) NOT NULL,
@@ -52,4 +52,4 @@ CREATE TABLE generation.generation_jobs (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_generation_owner ON generation.generation_jobs (owner_id);
+CREATE INDEX IF NOT EXISTS idx_generation_owner ON generation.generation_jobs (owner_id);

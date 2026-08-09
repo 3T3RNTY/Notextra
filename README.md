@@ -88,7 +88,7 @@ Notextra/
    .\mvnw.cmd spring-boot:run
    ```
 
-   On first run, database tables are auto-created via Hibernate.
+   On first run, Flyway creates schemas/tables if they do not exist; Hibernate also updates any missing entity tables.
 
 3. Verify the API is running:
 
@@ -114,11 +114,11 @@ Copy `.env.example` and fill in values for local overrides.
 
 ## Next steps
 
-- [ ] Identity: JWT auth + user registration
-- [ ] Notes: REST CRUD + rich text storage
-- [ ] Media: presigned upload to MinIO
+- [x] Identity: JWT auth + user registration (+ refresh tokens)
+- [x] Notes: REST CRUD + tags, collections, search
+- [x] Media: presigned upload to MinIO
 - [ ] AI: Whisper transcription + GPT summarization
-- [ ] Generation: async job pipeline with Redis
+- [x] Generation: async job pipeline with Redis + WebSocket status
 - [ ] Web app scaffold (Next.js)
 - [ ] Mobile app scaffold (Expo)
 
