@@ -1,5 +1,6 @@
 package com.notextra.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.notextra.shared.NotextraProperties;
 import java.net.URI;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -16,6 +17,11 @@ import software.amazon.awssdk.services.s3.S3Configuration;
 @EnableAsync
 @EnableConfigurationProperties(NotextraProperties.class)
 public class ApplicationConfig {
+
+	@Bean
+	ObjectMapper objectMapper() {
+		return new ObjectMapper();
+	}
 
 	@Bean
 	S3Client s3Client(NotextraProperties properties) {

@@ -76,25 +76,32 @@ Notextra/
 
 ## Local development
 
-1. Start infrastructure (Postgres, MinIO, Redis):
+1. Start Docker infrastructure (Postgres, MinIO, Redis):
 
-   ```bash
+   ```powershell
    docker compose up -d
    ```
 
-2. Run the API (Spring Boot auto-starts compose services if configured):
+2. Run the API:
 
-   ```bash
-   ./mvnw spring-boot:run
+   ```powershell
+   .\mvnw.cmd spring-boot:run
    ```
 
-3. Verify:
+   On first run, database tables are auto-created via Hibernate.
 
-   ```bash
+3. Verify the API is running:
+
+   ```powershell
    curl http://localhost:8080/api/health
+   # Should return: {"service":"notextra-api","status":"ok"}
    ```
 
-4. MinIO console: http://localhost:9001 (user: `notextra`, password: `notextraminio`)
+4. Access services:
+   - API: http://localhost:8080
+   - Swagger UI: http://localhost:8080/swagger-ui.html
+   - MinIO Console: http://localhost:9001 (credentials: `notextra` / `notextraminio`)
+   - Postgres: localhost:5432 (credentials: `notextra` / `notextra`)
 
 ## Environment variables
 
