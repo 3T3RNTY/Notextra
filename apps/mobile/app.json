@@ -1,0 +1,21 @@
+{
+  "expo": {
+    "name": "Notextra",
+    "slug": "notextra",
+    "scheme": "notextra",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "plugins": [
+      "expo-router",
+      "expo-secure-store"
+    ],
+    "android": {
+      "package": "com.notextra.app"
+    },
+    "ios": {
+      "bundleIdentifier": "com.notextra.app",
+      "supportsTablet": true
+    }
+  }
+}

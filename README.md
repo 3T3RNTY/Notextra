@@ -58,9 +58,12 @@ Notextra/
 │   ├── media/
 │   ├── ai/
 │   └── generation/
+├── packages/
+│   ├── theme/                    # Shared design tokens (light/dark + palettes)
+│   └── api/                      # Shared REST client
 ├── apps/
-│   ├── web/                      # Next.js web app (placeholder)
-│   └── mobile/                   # Expo/React Native app (placeholder)
+│   ├── web/                      # Next.js web app
+│   └── mobile/                   # Expo / React Native app
 ├── compose.yaml                  # Local dev infrastructure
 ├── docker/
 │   └── Dockerfile                # Production API image
@@ -73,6 +76,7 @@ Notextra/
 - Java 21+
 - Docker Desktop
 - Maven (or use `./mvnw`)
+- Node.js 20+ (web and mobile clients)
 
 ## Local development
 
@@ -103,12 +107,36 @@ Notextra/
    - MinIO Console: http://localhost:9001 (credentials: `notextra` / `notextraminio`)
    - Postgres: localhost:5432 (credentials: `notextra` / `notextra`)
 
+5. Install client dependencies (from the repo root):
+
+   ```powershell
+   npm install
+   ```
+
+6. Run the web app:
+
+   ```powershell
+   npm run web
+   ```
+
+   Open http://localhost:3000. Copy `apps/web/.env.example` to `apps/web/.env.local` if needed (`NEXT_PUBLIC_API_URL=http://localhost:8080`).
+
+7. Run the mobile app:
+
+   ```powershell
+   npm run mobile
+   ```
+
+   Then open the Expo dev tools. iOS simulator can use `http://localhost:8080`; Android emulator typically needs `EXPO_PUBLIC_API_URL=http://10.0.2.2:8080`. Theme (light/dark + color palettes) is changed under Options.
+
 ## Environment variables
 
 | Variable | Description |
 |----------|-------------|
 | `OPENAI_API_KEY` | OpenAI API key for AI features |
 | `SPRING_DATASOURCE_URL` | Override DB URL in production |
+| `NEXT_PUBLIC_API_URL` | Web client API base URL (default `http://localhost:8080`) |
+| `EXPO_PUBLIC_API_URL` | Mobile client API base URL |
 
 Copy `.env.example` and fill in values for local overrides.
 
@@ -119,8 +147,8 @@ Copy `.env.example` and fill in values for local overrides.
 - [x] Media: presigned upload to MinIO
 - [ ] AI: Whisper transcription + GPT summarization
 - [x] Generation: async job pipeline with Redis + WebSocket status
-- [ ] Web app scaffold (Next.js)
-- [ ] Mobile app scaffold (Expo)
+- [x] Web app scaffold (Next.js) with shared themes
+- [x] Mobile app scaffold (Expo) with shared themes
 
 ## License
 

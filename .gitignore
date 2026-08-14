@@ -35,6 +35,17 @@ build/
 ### Environment ###
 .env
 .env.local
+apps/web/.env.local
+
+### Node / clients ###
+node_modules/
+.next/
+.expo/
+dist/
+out/
+*.tsbuildinfo
+npm-debug.log*
+.DS_Store
 
 ### Generated docs ###
 spring-modulith-docs/

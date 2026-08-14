@@ -1,11 +1,19 @@
-# Web client — to be scaffolded
+# Web client
 
-Planned stack: **Next.js 15**, TypeScript, Tailwind CSS.
+Next.js 15 app that consumes the Notextra REST API.
 
-Will consume the Notextra REST API at `http://localhost:8080`.
+## Setup
 
-Scaffold command (when ready):
+From the repository root:
 
-```bash
-npx create-next-app@latest . --typescript --tailwind --app --src-dir
+```powershell
+npm install
+copy apps\web\.env.example apps\web\.env.local
+npm run web
 ```
+
+Open http://localhost:3000. The API should already be running at http://localhost:8080.
+
+## Theme
+
+Appearance (light / dark / system) and color palettes (Neutral, Ocean, Forest, Violet) are shared with the mobile app via `@notextra/theme`. Change them under **Options**. Preference is stored in `localStorage`.

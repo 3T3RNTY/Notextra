@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+@theme inline {
+	--color-background: var(--nx-background);
+	--color-surface: var(--nx-surface);
+	--color-surface-muted: var(--nx-surface-muted);
+	--color-foreground: var(--nx-text);
+	--color-muted: var(--nx-text-muted);
+	--color-border: var(--nx-border);
+	--color-primary: var(--nx-primary);
+	--color-primary-foreground: var(--nx-primary-foreground);
+	--color-accent: var(--nx-accent);
+	--color-danger: var(--nx-danger);
+	--color-success: var(--nx-success);
+	--radius-sm: 6px;
+	--radius-md: 10px;
+	--radius-lg: 16px;
+}
+
+:root {
+	--nx-background: #f7f7f5;
+	--nx-surface: #ffffff;
+	--nx-surface-muted: #eeeeec;
+	--nx-text: #1a1a18;
+	--nx-text-muted: #6b6b66;
+	--nx-border: #e2e2de;
+	--nx-primary: #2c2c28;
+	--nx-primary-foreground: #fafaf8;
+	--nx-accent: #5c5c56;
+	--nx-danger: #c0392b;
+	--nx-success: #2d7a4f;
+}
+
+html,
+body {
+	min-height: 100%;
+}
+
+body {
+	background: var(--nx-background);
+	color: var(--nx-text);
+	font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+
+input,
+textarea,
+select,
+button {
+	font: inherit;
+}
