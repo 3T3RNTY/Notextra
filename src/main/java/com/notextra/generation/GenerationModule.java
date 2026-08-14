@@ -4,7 +4,7 @@ import org.springframework.modulith.ApplicationModule;
 
 @ApplicationModule(
 	displayName = "Generation",
-	allowedDependencies = {"notes", "media", "ai"}
+	allowedDependencies = {"notes :: api", "media :: api", "ai :: api", "shared"}
 )
 public class GenerationModule {
 }

@@ -58,9 +58,12 @@ Notextra/
 │   ├── media/
 │   ├── ai/
 │   └── generation/
+├── packages/
+│   ├── theme/                    # Shared design tokens (light/dark + palettes)
+│   └── api/                      # Shared REST client
 ├── apps/
-│   ├── web/                      # Next.js web app (placeholder)
-│   └── mobile/                   # Expo/React Native app (placeholder)
+│   ├── web/                      # Next.js web app
+│   └── mobile/                   # Expo / React Native app
 ├── compose.yaml                  # Local dev infrastructure
 ├── docker/
 │   └── Dockerfile                # Production API image
@@ -73,28 +76,58 @@ Notextra/
 - Java 21+
 - Docker Desktop
 - Maven (or use `./mvnw`)
+- Node.js 20+ (web and mobile clients)
 
 ## Local development
 
-1. Start infrastructure (Postgres, MinIO, Redis):
+1. Start Docker infrastructure (Postgres, MinIO, Redis):
 
-   ```bash
+   ```powershell
    docker compose up -d
    ```
 
-2. Run the API (Spring Boot auto-starts compose services if configured):
+2. Run the API:
 
-   ```bash
-   ./mvnw spring-boot:run
+   ```powershell
+   .\mvnw.cmd spring-boot:run
    ```
 
-3. Verify:
+   On first run, Flyway creates schemas/tables if they do not exist; Hibernate also updates any missing entity tables.
 
-   ```bash
+3. Verify the API is running:
+
+   ```powershell
    curl http://localhost:8080/api/health
+   # Should return: {"service":"notextra-api","status":"ok"}
    ```
 
-4. MinIO console: http://localhost:9001 (user: `notextra`, password: `notextraminio`)
+4. Access services:
+   - API: http://localhost:8080
+   - Swagger UI: http://localhost:8080/swagger-ui.html
+   - MinIO Console: http://localhost:9001 (credentials: `notextra` / `notextraminio`)
+   - Postgres: localhost:5432 (credentials: `notextra` / `notextra`)
+
+5. Install client dependencies (from the repo root):
+
+   ```powershell
+   npm install
+   ```
+
+6. Run the web app:
+
+   ```powershell
+   npm run web
+   ```
+
+   Open http://localhost:3000. Copy `apps/web/.env.example` to `apps/web/.env.local` if needed (`NEXT_PUBLIC_API_URL=http://localhost:8080`).
+
+7. Run the mobile app:
+
+   ```powershell
+   npm run mobile
+   ```
+
+   Then open the Expo dev tools. iOS simulator can use `http://localhost:8080`; Android emulator typically needs `EXPO_PUBLIC_API_URL=http://10.0.2.2:8080`. Theme (light/dark + color palettes) is changed under Options.
 
 ## Environment variables
 
@@ -102,18 +135,20 @@ Notextra/
 |----------|-------------|
 | `OPENAI_API_KEY` | OpenAI API key for AI features |
 | `SPRING_DATASOURCE_URL` | Override DB URL in production |
+| `NEXT_PUBLIC_API_URL` | Web client API base URL (default `http://localhost:8080`) |
+| `EXPO_PUBLIC_API_URL` | Mobile client API base URL |
 
 Copy `.env.example` and fill in values for local overrides.
 
 ## Next steps
 
-- [ ] Identity: JWT auth + user registration
-- [ ] Notes: REST CRUD + rich text storage
-- [ ] Media: presigned upload to MinIO
+- [x] Identity: JWT auth + user registration (+ refresh tokens)
+- [x] Notes: REST CRUD + tags, collections, search
+- [x] Media: presigned upload to MinIO
 - [ ] AI: Whisper transcription + GPT summarization
-- [ ] Generation: async job pipeline with Redis
-- [ ] Web app scaffold (Next.js)
-- [ ] Mobile app scaffold (Expo)
+- [x] Generation: async job pipeline with Redis + WebSocket status
+- [x] Web app scaffold (Next.js) with shared themes
+- [x] Mobile app scaffold (Expo) with shared themes
 
 ## License
 
