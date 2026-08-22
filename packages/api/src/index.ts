@@ -19,6 +19,7 @@ export type {
 	NoteDetail,
 	NoteStatus,
 	NoteTag,
+	NoteType,
 	RegisterRequest,
 	TokenStore,
 	UpdateCollectionRequest,
@@ -26,3 +27,13 @@ export type {
 	UploadSessionResponse,
 	UserProfile,
 } from "./types";
+export {
+	NOTE_TYPE_OPTIONS,
+	MEDIA_TYPE_OPTIONS,
+	acceptForNoteType,
+	inferMediaType,
+	labelForMediaType,
+	labelForNoteType,
+	mediaTypeForNoteType,
+	pickerTypesForNoteType,
+} from "./note-types";

@@ -201,4 +201,110 @@ class ApiIntegrationTest {
 				.header("Authorization", "Bearer " + token))
 			.andExpect(status().isNoContent());
 	}
+
+	@Test
+	void noteTypeFilterAttachAndMediaDelete() throws Exception {
+		var registerBody = objectMapper.createObjectNode()
+			.put("email", "media-notes@example.com")
+			.put("password", "password123")
+			.put("displayName", "Media User");
+
+		var registerResponse = mockMvc.perform(post("/api/auth/register")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(registerBody.toString()))
+			.andExpect(status().isOk())
+			.andReturn();
+
+		String token = objectMapper.readTree(registerResponse.getResponse().getContentAsString())
+			.get("accessToken").asText();
+
+		var textNote = objectMapper.createObjectNode()
+			.put("title", "Text note")
+			.put("content", "Just words")
+			.put("type", "TEXT");
+
+		mockMvc.perform(post("/api/notes")
+				.header("Authorization", "Bearer " + token)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(textNote.toString()))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.type").value("TEXT"));
+
+		var photoNote = objectMapper.createObjectNode()
+			.put("title", "Holiday photos")
+			.put("content", "Beach")
+			.put("type", "IMAGE");
+
+		var photoResponse = mockMvc.perform(post("/api/notes")
+				.header("Authorization", "Bearer " + token)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(photoNote.toString()))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.type").value("IMAGE"))
+			.andReturn();
+
+		String noteId = objectMapper.readTree(photoResponse.getResponse().getContentAsString())
+			.get("id").asText();
+
+		mockMvc.perform(get("/api/notes")
+				.header("Authorization", "Bearer " + token)
+				.param("type", "IMAGE"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.length()").value(1))
+			.andExpect(jsonPath("$[0].id").value(noteId));
+
+		var uploadBody = objectMapper.createObjectNode()
+			.put("fileName", "beach.jpg")
+			.put("contentType", "image/jpeg")
+			.put("type", "IMAGE");
+
+		var uploadResponse = mockMvc.perform(post("/api/media/uploads")
+				.header("Authorization", "Bearer " + token)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(uploadBody.toString()))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.assetId").isNotEmpty())
+			.andReturn();
+
+		String assetId = objectMapper.readTree(uploadResponse.getResponse().getContentAsString())
+			.get("assetId").asText();
+
+		var confirmBody = objectMapper.createObjectNode().put("sizeBytes", 1024);
+		mockMvc.perform(post("/api/media/" + assetId + "/confirm")
+				.header("Authorization", "Bearer " + token)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(confirmBody.toString()))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.type").value("IMAGE"));
+
+		mockMvc.perform(post("/api/notes/" + noteId + "/attachments/" + assetId)
+				.header("Authorization", "Bearer " + token))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.attachmentIds[0]").value(assetId));
+
+		mockMvc.perform(delete("/api/notes/" + noteId + "/attachments/" + assetId)
+				.header("Authorization", "Bearer " + token))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.attachmentIds.length()").value(0));
+
+		mockMvc.perform(post("/api/notes/" + noteId + "/attachments/" + assetId)
+				.header("Authorization", "Bearer " + token))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.attachmentIds[0]").value(assetId));
+
+		mockMvc.perform(get("/api/media")
+				.header("Authorization", "Bearer " + token)
+				.param("type", "IMAGE"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.length()").value(1));
+
+		mockMvc.perform(delete("/api/media/" + assetId)
+				.header("Authorization", "Bearer " + token))
+			.andExpect(status().isNoContent());
+
+		mockMvc.perform(get("/api/notes/" + noteId)
+				.header("Authorization", "Bearer " + token))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.attachmentIds.length()").value(0));
+	}
 }

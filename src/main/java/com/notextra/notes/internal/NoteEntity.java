@@ -1,6 +1,7 @@
 package com.notextra.notes.internal;
 
 import com.notextra.notes.api.NoteStatus;
+import com.notextra.notes.api.NoteType;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
@@ -35,6 +36,10 @@ class NoteEntity {
 	private String content;
 
 	@Enumerated(EnumType.STRING)
+	@Column(name = "note_type", nullable = false, length = 50)
+	private NoteType type;
+
+	@Enumerated(EnumType.STRING)
 	@Column(nullable = false, length = 50)
 	private NoteStatus status;
 
@@ -52,11 +57,12 @@ class NoteEntity {
 	protected NoteEntity() {
 	}
 
-	NoteEntity(UUID id, UUID ownerId, String title, String content, NoteStatus status) {
+	NoteEntity(UUID id, UUID ownerId, String title, String content, NoteType type, NoteStatus status) {
 		this.id = id;
 		this.ownerId = ownerId;
 		this.title = title;
 		this.content = content;
+		this.type = type;
 		this.status = status;
 	}
 
@@ -94,6 +100,10 @@ class NoteEntity {
 
 	void setContent(String content) {
 		this.content = content;
+	}
+
+	NoteType getType() {
+		return type;
 	}
 
 	NoteStatus getStatus() {

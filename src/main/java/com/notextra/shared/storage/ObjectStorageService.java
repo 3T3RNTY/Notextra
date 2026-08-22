@@ -5,6 +5,7 @@ import java.time.Duration;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
 import software.amazon.awssdk.services.s3.model.NoSuchBucketException;
@@ -53,6 +54,14 @@ public class ObjectStorageService {
 				.build();
 			return presigner.presignGetObject(presignRequest).url().toString();
 		}
+	}
+
+	public void deleteObject(String storageKey) {
+		ensureBucketExists();
+		s3Client.deleteObject(DeleteObjectRequest.builder()
+			.bucket(properties.storage().bucket())
+			.key(storageKey)
+			.build());
 	}
 
 	private S3Presigner buildPresigner() {

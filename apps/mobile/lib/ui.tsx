@@ -117,6 +117,34 @@ export function Row({ children, style }: { children: ReactNode; style?: ViewStyl
 	return <View style={[styles.row, style]}>{children}</View>;
 }
 
+export function Chip({
+	label,
+	active,
+	onPress,
+}: {
+	label: string;
+	active?: boolean;
+	onPress: () => void;
+}) {
+	const { colors } = useTheme();
+	return (
+		<Pressable
+			onPress={onPress}
+			style={[
+				styles.chip,
+				{
+					backgroundColor: active ? colors.primary : colors.surface,
+					borderColor: active ? colors.primary : colors.border,
+				},
+			]}
+		>
+			<Text style={{ color: active ? colors.primaryForeground : colors.text, fontSize: 13, fontWeight: "600" }}>
+				{label}
+			</Text>
+		</Pressable>
+	);
+}
+
 const styles = StyleSheet.create({
 	screen: { flex: 1 },
 	scroll: { padding: 16, gap: 12, paddingBottom: 32 },
@@ -131,4 +159,5 @@ const styles = StyleSheet.create({
 	buttonLabel: { fontSize: 15, fontWeight: "600" },
 	error: { fontSize: 14 },
 	row: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
+	chip: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6 },
 });

@@ -1,4 +1,4 @@
-import { createApiClient } from "@notextra/api";
+import { createApiClient, inferMediaType, mediaTypeForNoteType, type MediaAssetDetail, type NoteType } from "@notextra/api";
 import Constants from "expo-constants";
 import { Platform } from "react-native";
 import { mobileTokenStore } from "./token-store";
@@ -58,4 +58,40 @@ export function formatDate(value: string | null | undefined): string {
 		return String(value);
 	}
 	return date.toLocaleString();
+}
+
+export function rewriteDevHost(url: string): string {
+	try {
+		const apiHost = new URL(baseUrl).hostname;
+		return url.replace(/^(https?:\/\/)(localhost|127\.0\.0\.1)(?=[:/]|$)/, `$1${apiHost}`);
+	} catch {
+		return url;
+	}
+}
+
+export async function uploadMediaFromUri(input: {
+	uri: string;
+	fileName: string;
+	mimeType?: string | null;
+	sizeBytes?: number | null;
+	noteType?: NoteType;
+}): Promise<MediaAssetDetail> {
+	const contentType = input.mimeType || "application/octet-stream";
+	const type = mediaTypeForNoteType(input.noteType ?? "TEXT") ?? inferMediaType(contentType, input.fileName);
+	const session = await api.media.initiateUpload({
+		fileName: input.fileName,
+		contentType,
+		type,
+	});
+	const fileResponse = await fetch(input.uri);
+	const body = await fileResponse.blob();
+	const put = await fetch(rewriteDevHost(session.uploadUrl), {
+		method: "PUT",
+		headers: { "Content-Type": contentType },
+		body,
+	});
+	if (!put.ok) {
+		throw new Error("Upload to storage failed");
+	}
+	return api.media.confirmUpload(session.assetId, { sizeBytes: input.sizeBytes ?? body.size });
 }

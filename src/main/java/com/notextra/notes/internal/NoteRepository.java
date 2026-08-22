@@ -1,5 +1,6 @@
 package com.notextra.notes.internal;
 
+import com.notextra.notes.api.NoteType;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -10,11 +11,15 @@ interface NoteRepository extends JpaRepository<NoteEntity, UUID> {
 
 	List<NoteEntity> findByOwnerIdOrderByUpdatedAtDesc(UUID ownerId);
 
+	@Query("SELECT DISTINCT n FROM NoteEntity n JOIN n.attachmentIds a WHERE a = :mediaAssetId")
+	List<NoteEntity> findByAttachmentId(@Param("mediaAssetId") UUID mediaAssetId);
+
 	@Query("""
 		SELECT DISTINCT n FROM NoteEntity n
 		WHERE n.ownerId = :ownerId
 		AND (:q IS NULL OR LOWER(n.title) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%'))
 			OR LOWER(COALESCE(n.content, '')) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%')))
+		AND (:type IS NULL OR n.type = :type)
 		AND (:tagId IS NULL OR EXISTS (
 			SELECT 1 FROM NoteTagEntity nt WHERE nt.noteId = n.id AND nt.tagId = :tagId
 		))
@@ -26,6 +31,7 @@ interface NoteRepository extends JpaRepository<NoteEntity, UUID> {
 	List<NoteEntity> search(
 		@Param("ownerId") UUID ownerId,
 		@Param("q") String q,
+		@Param("type") NoteType type,
 		@Param("tagId") UUID tagId,
 		@Param("collectionId") UUID collectionId
 	);

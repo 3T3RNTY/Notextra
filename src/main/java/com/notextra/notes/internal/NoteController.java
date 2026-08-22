@@ -1,6 +1,7 @@
 package com.notextra.notes.internal;
 
 import com.notextra.notes.api.NoteDetail;
+import com.notextra.notes.api.NoteType;
 import com.notextra.notes.internal.NotesService.CreateNoteRequest;
 import com.notextra.notes.internal.NotesService.UpdateNoteRequest;
 import jakarta.validation.Valid;
@@ -31,10 +32,11 @@ class NoteController {
 	@GetMapping
 	List<NoteDetail> list(
 		@RequestParam(required = false) String q,
+		@RequestParam(required = false) NoteType type,
 		@RequestParam(required = false) UUID tagId,
 		@RequestParam(required = false) UUID collectionId
 	) {
-		return notesService.listForCurrentUser(q, tagId, collectionId);
+		return notesService.listForCurrentUser(q, type, tagId, collectionId);
 	}
 
 	@PostMapping
@@ -62,6 +64,11 @@ class NoteController {
 	@PostMapping("/{noteId}/attachments/{mediaAssetId}")
 	NoteDetail attachMedia(@PathVariable UUID noteId, @PathVariable UUID mediaAssetId) {
 		return notesService.attachMedia(noteId, mediaAssetId);
+	}
+
+	@DeleteMapping("/{noteId}/attachments/{mediaAssetId}")
+	NoteDetail detachMedia(@PathVariable UUID noteId, @PathVariable UUID mediaAssetId) {
+		return notesService.detachMedia(noteId, mediaAssetId);
 	}
 
 	@PostMapping("/{noteId}/tags/{tagId}")

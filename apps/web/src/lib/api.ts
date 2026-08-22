@@ -1,4 +1,11 @@
-import { createApiClient } from "@notextra/api";
+import {
+	acceptForNoteType,
+	createApiClient,
+	inferMediaType,
+	mediaTypeForNoteType,
+	type MediaAssetDetail,
+	type NoteType,
+} from "@notextra/api";
 import { webTokenStore } from "./token-store";
 
 export const api = createApiClient({
@@ -17,18 +24,25 @@ export function formatDate(value: string | null | undefined): string {
 	return date.toLocaleString();
 }
 
-export function inferMediaType(contentType: string): "IMAGE" | "AUDIO" | "VIDEO" | "DOCUMENT" | "OTHER" {
-	if (contentType.startsWith("image/")) {
-		return "IMAGE";
+export function fileAcceptForNoteType(type: NoteType): string | undefined {
+	return acceptForNoteType(type);
+}
+
+export async function uploadMediaFile(file: File, noteType?: NoteType): Promise<MediaAssetDetail> {
+	const contentType = file.type || "application/octet-stream";
+	const type = mediaTypeForNoteType(noteType ?? "TEXT") ?? inferMediaType(contentType, file.name);
+	const session = await api.media.initiateUpload({
+		fileName: file.name,
+		contentType,
+		type,
+	});
+	const put = await fetch(session.uploadUrl, {
+		method: "PUT",
+		headers: { "Content-Type": contentType },
+		body: file,
+	});
+	if (!put.ok) {
+		throw new Error("Upload to storage failed");
 	}
-	if (contentType.startsWith("audio/")) {
-		return "AUDIO";
-	}
-	if (contentType.startsWith("video/")) {
-		return "VIDEO";
-	}
-	if (contentType.startsWith("text/") || contentType.includes("pdf") || contentType.includes("document")) {
-		return "DOCUMENT";
-	}
-	return "OTHER";
+	return api.media.confirmUpload(session.assetId, { sizeBytes: file.size });
 }

@@ -2,6 +2,7 @@ package com.notextra.media.internal;
 
 import com.notextra.media.api.MediaAssetDetail;
 import com.notextra.media.api.MediaAssetRef;
+import com.notextra.media.api.MediaDeleted;
 import com.notextra.media.api.MediaType;
 import com.notextra.media.api.MediaUploaded;
 import com.notextra.media.api.MediaApi;
@@ -71,10 +72,18 @@ class MediaService implements MediaApi {
 		return toDetail(asset);
 	}
 
-	List<MediaAssetDetail> listForCurrentUser() {
-		return mediaAssetRepository.findByOwnerIdOrderByCreatedAtDesc(CurrentUser.id()).stream()
-			.map(this::toDetail)
-			.toList();
+	List<MediaAssetDetail> listForCurrentUser(MediaType type) {
+		List<MediaAssetEntity> assets = type == null
+			? mediaAssetRepository.findByOwnerIdOrderByCreatedAtDesc(CurrentUser.id())
+			: mediaAssetRepository.findByOwnerIdAndTypeOrderByCreatedAtDesc(CurrentUser.id(), type);
+		return assets.stream().map(this::toDetail).toList();
+	}
+
+	void delete(UUID assetId) {
+		var asset = getOwnedEntity(assetId);
+		objectStorageService.deleteObject(asset.getStorageKey());
+		mediaAssetRepository.delete(asset);
+		events.publishEvent(new MediaDeleted(asset.getId(), asset.getOwnerId()));
 	}
 
 	MediaAssetDetail get(UUID assetId) {

@@ -87,3 +87,27 @@ export function StatusMessage({ error, empty }: { error?: string | null; empty?:
 	}
 	return null;
 }
+
+export function FilterChip({
+	active,
+	onClick,
+	children,
+}: {
+	active?: boolean;
+	onClick: () => void;
+	children: ReactNode;
+}) {
+	return (
+		<button
+			type="button"
+			onClick={onClick}
+			className={`rounded-full border px-3 py-1 text-sm ${
+				active
+					? "border-primary bg-primary text-primary-foreground"
+					: "border-border bg-surface text-foreground hover:border-accent"
+			}`}
+		>
+			{children}
+		</button>
+	);
+}

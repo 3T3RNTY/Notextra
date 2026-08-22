@@ -1,10 +1,14 @@
 package com.notextra.notes.internal;
 
+import com.notextra.media.api.MediaApi;
+import com.notextra.media.api.MediaDeleted;
+import com.notextra.media.api.MediaType;
 import com.notextra.notes.api.NoteCreated;
 import com.notextra.notes.api.NoteDetail;
 import com.notextra.notes.api.NoteStatus;
 import com.notextra.notes.api.NoteSummary;
 import com.notextra.notes.api.NoteTag;
+import com.notextra.notes.api.NoteType;
 import com.notextra.notes.api.NotesApi;
 import com.notextra.shared.security.CurrentUser;
 import com.notextra.shared.web.BadRequestException;
@@ -25,6 +29,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +42,7 @@ class NotesService implements NotesApi {
 	private final NoteTagRepository noteTagRepository;
 	private final CollectionRepository collectionRepository;
 	private final CollectionNoteRepository collectionNoteRepository;
+	private final MediaApi mediaApi;
 	private final ApplicationEventPublisher events;
 
 	NotesService(
@@ -45,6 +51,7 @@ class NotesService implements NotesApi {
 		NoteTagRepository noteTagRepository,
 		CollectionRepository collectionRepository,
 		CollectionNoteRepository collectionNoteRepository,
+		MediaApi mediaApi,
 		ApplicationEventPublisher events
 	) {
 		this.noteRepository = noteRepository;
@@ -52,12 +59,13 @@ class NotesService implements NotesApi {
 		this.noteTagRepository = noteTagRepository;
 		this.collectionRepository = collectionRepository;
 		this.collectionNoteRepository = collectionNoteRepository;
+		this.mediaApi = mediaApi;
 		this.events = events;
 	}
 
-	List<NoteDetail> listForCurrentUser(String q, UUID tagId, UUID collectionId) {
+	List<NoteDetail> listForCurrentUser(String q, NoteType type, UUID tagId, UUID collectionId) {
 		String query = (q == null || q.isBlank()) ? null : q.trim();
-		List<NoteEntity> notes = noteRepository.search(CurrentUser.id(), query, tagId, collectionId);
+		List<NoteEntity> notes = noteRepository.search(CurrentUser.id(), query, type, tagId, collectionId);
 		Map<UUID, List<NoteTag>> tagsByNote = loadTagsByNoteIds(
 			notes.stream().map(NoteEntity::getId).toList()
 		);
@@ -72,6 +80,7 @@ class NotesService implements NotesApi {
 			CurrentUser.id(),
 			request.title(),
 			request.content(),
+			request.type() == null ? NoteType.TEXT : request.type(),
 			NoteStatus.ACTIVE
 		);
 		noteRepository.save(note);
@@ -107,8 +116,27 @@ class NotesService implements NotesApi {
 
 	NoteDetail attachMedia(UUID noteId, UUID mediaAssetId) {
 		var note = getOwnedEntity(noteId);
+		var asset = mediaApi.findById(mediaAssetId)
+			.filter(ref -> mediaApi.isOwnedBy(mediaAssetId, CurrentUser.id()))
+			.orElseThrow(() -> new BadRequestException("Media asset not found"));
+		if (!isCompatible(note.getType(), asset.type())) {
+			throw new BadRequestException("Media type does not match this note");
+		}
 		note.getAttachmentIds().add(mediaAssetId);
 		return toDetail(note, tagsForNote(noteId));
+	}
+
+	NoteDetail detachMedia(UUID noteId, UUID mediaAssetId) {
+		var note = getOwnedEntity(noteId);
+		note.getAttachmentIds().remove(mediaAssetId);
+		return toDetail(note, tagsForNote(noteId));
+	}
+
+	@EventListener
+	void onMediaDeleted(MediaDeleted event) {
+		for (NoteEntity note : noteRepository.findByAttachmentId(event.assetId())) {
+			note.getAttachmentIds().remove(event.assetId());
+		}
 	}
 
 	NoteDetail attachTag(UUID noteId, UUID tagId) {
@@ -229,6 +257,7 @@ class NotesService implements NotesApi {
 			ownerId,
 			title,
 			content,
+			NoteType.TEXT,
 			NoteStatus.ACTIVE
 		);
 		noteRepository.save(note);
@@ -320,12 +349,20 @@ class NotesService implements NotesApi {
 		return new NoteSummary(note.getId(), note.getTitle(), note.getStatus(), tags);
 	}
 
+	private boolean isCompatible(NoteType noteType, MediaType mediaType) {
+		if (noteType == NoteType.TEXT) {
+			return true;
+		}
+		return noteType.name().equals(mediaType.name());
+	}
+
 	private NoteDetail toDetail(NoteEntity note, List<NoteTag> tags) {
 		return new NoteDetail(
 			note.getId(),
 			note.getOwnerId(),
 			note.getTitle(),
 			note.getContent(),
+			note.getType(),
 			note.getStatus(),
 			List.copyOf(note.getAttachmentIds()),
 			tags,
@@ -337,8 +374,14 @@ class NotesService implements NotesApi {
 	record CreateNoteRequest(
 		@NotBlank @Size(max = 500) String title,
 		String content,
+		NoteType type,
 		List<UUID> tagIds
 	) {
+		CreateNoteRequest {
+			if (type == null) {
+				type = NoteType.TEXT;
+			}
+		}
 	}
 
 	record UpdateNoteRequest(

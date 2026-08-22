@@ -145,9 +145,14 @@ export function createApiClient(options: ApiClientOptions) {
 			me: () => request<import("./types").UserProfile>("/api/auth/me"),
 		},
 		notes: {
-			list: (params?: { q?: string; tagId?: string; collectionId?: string }) =>
+			list: (params?: { q?: string; type?: string; tagId?: string; collectionId?: string }) =>
 				request<import("./types").NoteDetail[]>(
-					`/api/notes${query({ q: params?.q, tagId: params?.tagId, collectionId: params?.collectionId })}`,
+					`/api/notes${query({
+						q: params?.q,
+						type: params?.type,
+						tagId: params?.tagId,
+						collectionId: params?.collectionId,
+					})}`,
 				),
 			get: (noteId: string) => request<import("./types").NoteDetail>(`/api/notes/${noteId}`),
 			create: (body: import("./types").CreateNoteRequest) =>
@@ -161,6 +166,10 @@ export function createApiClient(options: ApiClientOptions) {
 			attachMedia: (noteId: string, mediaAssetId: string) =>
 				request<import("./types").NoteDetail>(`/api/notes/${noteId}/attachments/${mediaAssetId}`, {
 					method: "POST",
+				}),
+			detachMedia: (noteId: string, mediaAssetId: string) =>
+				request<import("./types").NoteDetail>(`/api/notes/${noteId}/attachments/${mediaAssetId}`, {
+					method: "DELETE",
 				}),
 			attachTag: (noteId: string, tagId: string) =>
 				request<import("./types").NoteDetail>(`/api/notes/${noteId}/tags/${tagId}`, { method: "POST" }),
@@ -198,7 +207,8 @@ export function createApiClient(options: ApiClientOptions) {
 				}),
 		},
 		media: {
-			list: () => request<import("./types").MediaAssetDetail[]>("/api/media"),
+			list: (params?: { type?: string }) =>
+				request<import("./types").MediaAssetDetail[]>(`/api/media${query({ type: params?.type })}`),
 			get: (assetId: string) => request<import("./types").MediaAssetDetail>(`/api/media/${assetId}`),
 			initiateUpload: (body: import("./types").InitiateUploadRequest) =>
 				request<import("./types").UploadSessionResponse>("/api/media/uploads", {
@@ -210,6 +220,7 @@ export function createApiClient(options: ApiClientOptions) {
 					method: "POST",
 					body: JSON.stringify(body),
 				}),
+			delete: (assetId: string) => request<void>(`/api/media/${assetId}`, { method: "DELETE" }),
 		},
 		generation: {
 			list: () => request<import("./types").GenerationJobDetail[]>("/api/generation/jobs"),
