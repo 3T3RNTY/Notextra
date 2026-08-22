@@ -1,7 +1,15 @@
-import { createApiClient, inferMediaType, mediaTypeForNoteType, type MediaAssetDetail, type NoteType } from "@notextra/api";
+import {
+	createApiClient,
+	inferMediaType,
+	mediaTypeForNoteType,
+	type MediaAssetDetail,
+	type NoteType,
+} from "@notextra/api";
 import Constants from "expo-constants";
 import { Platform } from "react-native";
 import { mobileTokenStore } from "./token-store";
+
+export { inferMediaType };
 
 function firstLanHost(...values: Array<string | undefined | null>): string | null {
 	for (const value of values) {
@@ -33,7 +41,7 @@ export function resolveApiBaseUrl(): string {
 	}
 
 	if (Platform.OS === "android" && /:\/\/(localhost|127\.0\.0\.1)(?=[:/]|$)/.test(configured)) {
-		return configured.replace(/^(https?:\/\/)(localhost|127\.0\.0\.1)/, "$110.0.2.2");
+		return configured.replace(/^(https?:\/\/)(localhost|127\.0\.0\.1)/, `$110.0.2.2`);
 	}
 
 	return configured;
@@ -85,13 +93,6 @@ export async function uploadMediaFromUri(input: {
 	});
 	const fileResponse = await fetch(input.uri);
 	const body = await fileResponse.blob();
-	const put = await fetch(rewriteDevHost(session.uploadUrl), {
-		method: "PUT",
-		headers: { "Content-Type": contentType },
-		body,
-	});
-	if (!put.ok) {
-		throw new Error("Upload to storage failed");
-	}
+	await api.media.uploadContent(session.assetId, body, contentType);
 	return api.media.confirmUpload(session.assetId, { sizeBytes: input.sizeBytes ?? body.size });
 }

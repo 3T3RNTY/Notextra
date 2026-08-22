@@ -11,7 +11,7 @@ export default function NewNotePage() {
 	const [title, setTitle] = useState("");
 	const [content, setContent] = useState("");
 	const [type, setType] = useState<NoteType>("TEXT");
-	const [file, setFile] = useState<File | null>(null);
+	const [files, setFiles] = useState<File[]>([]);
 	const [error, setError] = useState<string | null>(null);
 	const [pending, setPending] = useState(false);
 
@@ -21,7 +21,7 @@ export default function NewNotePage() {
 		setPending(true);
 		try {
 			const note = await api.notes.create({ title, content, type });
-			if (file && type !== "TEXT") {
+			for (const file of files) {
 				const asset = await uploadMediaFile(file, type);
 				await api.notes.attachMedia(note.id, asset.id);
 			}
@@ -43,7 +43,7 @@ export default function NewNotePage() {
 						onChange={(e) => {
 							const next = e.target.value as NoteType;
 							setType(next);
-							setFile(null);
+							setFiles([]);
 						}}
 					>
 						{NOTE_TYPE_OPTIONS.map((option) => (
@@ -59,14 +59,16 @@ export default function NewNotePage() {
 				<Field label={type === "TEXT" ? "Content" : "Caption"}>
 					<Textarea rows={type === "TEXT" ? 12 : 4} value={content} onChange={(e) => setContent(e.target.value)} />
 				</Field>
-				{type !== "TEXT" ? (
-					<Field label="File">
-						<Input
-							type="file"
-							accept={fileAcceptForNoteType(type)}
-							onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-						/>
-					</Field>
+				<Field label="Files">
+					<Input
+						type="file"
+						multiple
+						accept={type === "TEXT" ? undefined : fileAcceptForNoteType(type)}
+						onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
+					/>
+				</Field>
+				{files.length > 0 ? (
+					<p className="text-sm text-muted">{files.map((file) => file.name).join(", ")}</p>
 				) : null}
 				{error ? <p className="text-sm text-danger">{error}</p> : null}
 				<Button type="submit" disabled={pending}>

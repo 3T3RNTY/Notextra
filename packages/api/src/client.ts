@@ -103,6 +103,28 @@ export function createApiClient(options: ApiClientOptions) {
 		return body as T;
 	}
 
+	async function authorizedFetch(path: string, init: RequestInit = {}, retry = true): Promise<Response> {
+		const headers = new Headers(init.headers);
+		const accessToken = await tokenStore.getAccessToken();
+		if (accessToken) {
+			headers.set("Authorization", `Bearer ${accessToken}`);
+		}
+		const response = await fetch(joinUrl(options.baseUrl, path), { ...init, headers });
+		const isAuthPath = path.startsWith("/api/auth/");
+		if (response.status === 401 && retry && !isAuthPath) {
+			const refreshed = await tryRefresh();
+			if (refreshed) {
+				return authorizedFetch(path, init, false);
+			}
+		}
+		return response;
+	}
+
+	async function authHeaders(): Promise<Record<string, string>> {
+		const accessToken = await tokenStore.getAccessToken();
+		return accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
+	}
+
 	function query(params: Record<string, string | undefined>): string {
 		const search = new URLSearchParams();
 		for (const [key, value] of Object.entries(params)) {
@@ -116,6 +138,8 @@ export function createApiClient(options: ApiClientOptions) {
 
 	return {
 		request,
+		authHeaders,
+		baseUrl: options.baseUrl.replace(/\/$/, ""),
 		auth: {
 			register: (body: { email: string; password: string; displayName: string }) =>
 				request<AuthResponse>("/api/auth/register", { method: "POST", body: JSON.stringify(body) }).then(
@@ -221,6 +245,31 @@ export function createApiClient(options: ApiClientOptions) {
 					body: JSON.stringify(body),
 				}),
 			delete: (assetId: string) => request<void>(`/api/media/${assetId}`, { method: "DELETE" }),
+			contentUrl: (assetId: string, inline = false) =>
+				joinUrl(options.baseUrl, `/api/media/${assetId}/content${inline ? "?inline=true" : ""}`),
+			download: async (assetId: string, inline = false) => {
+				const response = await authorizedFetch(
+					`/api/media/${assetId}/content${inline ? "?inline=true" : ""}`,
+				);
+				if (!response.ok) {
+					const body = await readBody(response);
+					throw new ApiRequestError(response.status, errorMessage(body, response.statusText), body);
+				}
+				return response.blob();
+			},
+			uploadContent: async (assetId: string, body: Blob, contentType: string) => {
+				const response = await authorizedFetch(`/api/media/${assetId}/content`, {
+					method: "PUT",
+					headers: {
+						"Content-Type": contentType || "application/octet-stream",
+					},
+					body,
+				});
+				if (!response.ok && response.status !== 204) {
+					const parsed = await readBody(response);
+					throw new ApiRequestError(response.status, errorMessage(parsed, response.statusText), parsed);
+				}
+			},
 		},
 		generation: {
 			list: () => request<import("./types").GenerationJobDetail[]>("/api/generation/jobs"),

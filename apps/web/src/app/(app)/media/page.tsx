@@ -10,6 +10,7 @@ import {
 import { ChangeEvent, useEffect, useState } from "react";
 import { Button, Card, FilterChip, PageHeader, StatusMessage } from "@/components/ui";
 import { api, formatDate, uploadMediaFile } from "@/lib/api";
+import { downloadMediaFile, openMediaInBrowser } from "@/lib/media-file";
 
 export default function MediaPage() {
 	const [assets, setAssets] = useState<MediaAssetDetail[]>([]);
@@ -17,6 +18,7 @@ export default function MediaPage() {
 	const [error, setError] = useState<string | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [uploading, setUploading] = useState(false);
+	const [busyId, setBusyId] = useState<string | null>(null);
 
 	async function load(nextType?: MediaType | "") {
 		const selectedType = nextType === undefined ? type : nextType;
@@ -67,6 +69,30 @@ export default function MediaPage() {
 		}
 	}
 
+	async function onOpen(asset: MediaAssetDetail) {
+		setBusyId(asset.id);
+		setError(null);
+		try {
+			await openMediaInBrowser(asset);
+		} catch (err) {
+			setError(err instanceof Error ? err.message : "Could not open file");
+		} finally {
+			setBusyId(null);
+		}
+	}
+
+	async function onDownload(asset: MediaAssetDetail) {
+		setBusyId(asset.id);
+		setError(null);
+		try {
+			await downloadMediaFile(asset);
+		} catch (err) {
+			setError(err instanceof Error ? err.message : "Could not download file");
+		} finally {
+			setBusyId(null);
+		}
+	}
+
 	return (
 		<div>
 			<PageHeader
@@ -114,12 +140,13 @@ export default function MediaPage() {
 								{labelForMediaType(asset.type)} · {formatDate(asset.createdAt)}
 							</p>
 						</div>
-						<div className="flex items-center gap-2">
-							{asset.downloadUrl ? (
-								<a href={asset.downloadUrl} className="text-sm text-accent underline" target="_blank" rel="noreferrer">
-									Open
-								</a>
-							) : null}
+						<div className="flex shrink-0 items-center gap-2">
+							<Button variant="ghost" disabled={busyId === asset.id} onClick={() => void onOpen(asset)}>
+								{busyId === asset.id ? "…" : "Open"}
+							</Button>
+							<Button variant="ghost" disabled={busyId === asset.id} onClick={() => void onDownload(asset)}>
+								Download
+							</Button>
 							<Button variant="danger" onClick={() => void onDelete(asset.id)}>
 								Delete
 							</Button>

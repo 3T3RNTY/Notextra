@@ -8,8 +8,9 @@ import {
 } from "@notextra/api";
 import { FormEvent, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Button, Card, Field, Input, PageHeader, Textarea } from "@/components/ui";
-import { api, fileAcceptForNoteType, formatDate, uploadMediaFile } from "@/lib/api";
+import { Button, Card, Field, Input, PageHeader, Select, Textarea } from "@/components/ui";
+import { api, fileAcceptForNoteType, formatDate, loadNoteAttachments, uploadMediaFile } from "@/lib/api";
+import { downloadMediaFile, openMediaInBrowser } from "@/lib/media-file";
 
 export default function NoteDetailPage() {
 	const params = useParams<{ id: string }>();
@@ -17,23 +18,22 @@ export default function NoteDetailPage() {
 	const router = useRouter();
 	const [note, setNote] = useState<NoteDetail | null>(null);
 	const [attachments, setAttachments] = useState<MediaAssetDetail[]>([]);
+	const [library, setLibrary] = useState<MediaAssetDetail[]>([]);
 	const [title, setTitle] = useState("");
 	const [content, setContent] = useState("");
+	const [existingId, setExistingId] = useState("");
 	const [error, setError] = useState<string | null>(null);
 	const [pending, setPending] = useState(false);
-	const [uploading, setUploading] = useState(false);
+	const [busyFile, setBusyFile] = useState(false);
 
 	async function loadNote(id: string) {
 		const loaded = await api.notes.get(id);
+		const [attached, all] = await Promise.all([loadNoteAttachments(loaded), api.media.list()]);
 		setNote(loaded);
 		setTitle(loaded.title);
 		setContent(loaded.content ?? "");
-		if (loaded.attachmentIds.length === 0) {
-			setAttachments([]);
-			return loaded;
-		}
-		const assets = await api.media.list();
-		setAttachments(assets.filter((asset) => loaded.attachmentIds.includes(asset.id)));
+		setAttachments(attached);
+		setLibrary(all);
 		return loaded;
 	}
 
@@ -61,21 +61,56 @@ export default function NoteDetailPage() {
 		}
 	}
 
-	async function onAddFile(file: File | undefined) {
-		if (!note || !file) {
+	async function onAddFiles(fileList: FileList | null) {
+		if (!note || !fileList?.length) {
 			return;
 		}
-		setUploading(true);
+		setBusyFile(true);
 		setError(null);
 		try {
-			const asset = await uploadMediaFile(file, note.type);
-			const updated = await api.notes.attachMedia(note.id, asset.id);
-			setNote(updated);
-			setAttachments((current) => [asset, ...current.filter((item) => item.id !== asset.id)]);
+			let updated = note;
+			for (const file of Array.from(fileList)) {
+				const asset = await uploadMediaFile(file, note.type);
+				updated = await api.notes.attachMedia(note.id, asset.id);
+			}
+			await loadNote(updated.id);
 		} catch (err) {
-			setError(err instanceof ApiRequestError || err instanceof Error ? err.message : "Upload failed");
+			setError(err instanceof ApiRequestError || err instanceof Error ? err.message : "Could not attach file");
 		} finally {
-			setUploading(false);
+			setBusyFile(false);
+		}
+	}
+
+	async function onAttachExisting() {
+		if (!note || !existingId) {
+			return;
+		}
+		setBusyFile(true);
+		setError(null);
+		try {
+			await api.notes.attachMedia(note.id, existingId);
+			setExistingId("");
+			await loadNote(note.id);
+		} catch (err) {
+			setError(err instanceof Error ? err.message : "Could not attach file");
+		} finally {
+			setBusyFile(false);
+		}
+	}
+
+	async function onRemove(assetId: string) {
+		if (!note) {
+			return;
+		}
+		setBusyFile(true);
+		setError(null);
+		try {
+			await api.notes.detachMedia(note.id, assetId);
+			await loadNote(note.id);
+		} catch (err) {
+			setError(err instanceof Error ? err.message : "Could not remove file");
+		} finally {
+			setBusyFile(false);
 		}
 	}
 
@@ -86,9 +121,7 @@ export default function NoteDetailPage() {
 		setError(null);
 		try {
 			await api.media.delete(assetId);
-			const updated = await api.notes.get(note.id);
-			setNote(updated);
-			setAttachments((current) => current.filter((asset) => asset.id !== assetId));
+			await loadNote(note.id);
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "Could not delete file");
 		}
@@ -101,6 +134,8 @@ export default function NoteDetailPage() {
 		await api.notes.delete(note.id);
 		router.replace("/");
 	}
+
+	const availableLibrary = library.filter((asset) => !(note?.attachmentIds ?? []).includes(asset.id));
 
 	if (!note && !error) {
 		return <p className="text-sm text-muted">Loading…</p>;
@@ -134,39 +169,61 @@ export default function NoteDetailPage() {
 
 			{note ? (
 				<div className="mt-8 space-y-3">
-					<div className="flex items-center justify-between gap-3">
+					<div className="flex flex-wrap items-center justify-between gap-3">
 						<h2 className="text-lg font-medium">Files</h2>
 						<label className="inline-flex cursor-pointer">
 							<span className="inline-flex items-center justify-center rounded-md bg-surface-muted px-3 py-2 text-sm font-medium">
-								{uploading ? "Uploading…" : "Add file"}
+								{busyFile ? "Working…" : "Add file"}
 							</span>
 							<input
 								type="file"
+								multiple
 								accept={note.type === "TEXT" ? undefined : fileAcceptForNoteType(note.type)}
 								className="hidden"
-								disabled={uploading}
+								disabled={busyFile}
 								onChange={(event) => {
-									const file = event.target.files?.[0];
+									const list = event.target.files;
 									event.target.value = "";
-									void onAddFile(file);
+									void onAddFiles(list);
 								}}
 							/>
 						</label>
 					</div>
+					{availableLibrary.length > 0 ? (
+						<div className="flex gap-2">
+							<Select value={existingId} onChange={(e) => setExistingId(e.target.value)}>
+								<option value="">Attach existing media</option>
+								{availableLibrary.map((asset) => (
+									<option key={asset.id} value={asset.id}>
+										{asset.fileName}
+									</option>
+								))}
+							</Select>
+							<Button type="button" variant="ghost" disabled={busyFile || !existingId} onClick={() => void onAttachExisting()}>
+								Attach
+							</Button>
+						</div>
+					) : null}
 					{attachments.length === 0 ? <p className="text-sm text-muted">No files attached.</p> : null}
 					{attachments.map((asset) => (
-						<Card key={asset.id} className="flex items-center justify-between gap-3">
+						<Card key={asset.id} className="flex flex-wrap items-center justify-between gap-3">
 							<div>
 								<p className="font-medium">{asset.fileName}</p>
-								<p className="text-xs text-muted">{formatDate(asset.createdAt)}</p>
+								<p className="text-xs text-muted">
+									{asset.type} · {formatDate(asset.createdAt)}
+								</p>
 							</div>
-							<div className="flex items-center gap-2">
-								{asset.downloadUrl ? (
-									<a href={asset.downloadUrl} className="text-sm text-accent underline" target="_blank" rel="noreferrer">
-										Open
-									</a>
-								) : null}
-								<Button variant="danger" onClick={() => void onDeleteFile(asset.id)}>
+							<div className="flex flex-wrap items-center gap-2">
+								<Button variant="ghost" onClick={() => void openMediaInBrowser(asset)}>
+									Open
+								</Button>
+								<Button variant="ghost" onClick={() => void downloadMediaFile(asset)}>
+									Download
+								</Button>
+								<Button variant="ghost" disabled={busyFile} onClick={() => void onRemove(asset.id)}>
+									Remove
+								</Button>
+								<Button variant="danger" disabled={busyFile} onClick={() => void onDeleteFile(asset.id)}>
 									Delete
 								</Button>
 							</div>

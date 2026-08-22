@@ -8,8 +8,9 @@ import {
 import * as DocumentPicker from "expo-document-picker";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
-import { Alert, Linking } from "react-native";
-import { api, formatDate, rewriteDevHost, uploadMediaFromUri } from "@/lib/api";
+import { Alert } from "react-native";
+import { api, formatDate } from "@/lib/api";
+import { shareMediaFile, uploadMediaFromUri } from "@/lib/media-file";
 import { Button, Card, Chip, ErrorText, Heading, Muted, Row, Screen, Title } from "@/lib/ui";
 
 export default function MediaScreen() {
@@ -17,6 +18,7 @@ export default function MediaScreen() {
 	const [type, setType] = useState<MediaType | "">("");
 	const [error, setError] = useState<string | null>(null);
 	const [uploading, setUploading] = useState(false);
+	const [busyId, setBusyId] = useState<string | null>(null);
 
 	const load = useCallback(async (nextType?: MediaType | "") => {
 		const selectedType = nextType === undefined ? type : nextType;
@@ -75,10 +77,35 @@ export default function MediaScreen() {
 		]);
 	}
 
+	async function onOpen(asset: MediaAssetDetail) {
+		setBusyId(asset.id);
+		setError(null);
+		try {
+			await shareMediaFile(asset, false);
+		} catch (err) {
+			setError(err instanceof Error ? err.message : "Could not open file");
+		} finally {
+			setBusyId(null);
+		}
+	}
+
+	async function onDownload(asset: MediaAssetDetail) {
+		setBusyId(asset.id);
+		setError(null);
+		try {
+			await shareMediaFile(asset, true);
+		} catch (err) {
+			setError(err instanceof Error ? err.message : "Could not download file");
+		} finally {
+			setBusyId(null);
+		}
+	}
+
 	return (
 		<Screen>
 			<Title>Media</Title>
 			<Button label={uploading ? "Uploading…" : "Upload"} onPress={() => void onUpload()} disabled={uploading} />
+			<Muted>Files uploaded from web or this phone can be opened or saved here.</Muted>
 			<Row>
 				<Chip
 					label="All"
@@ -108,9 +135,20 @@ export default function MediaScreen() {
 					<Muted>
 						{labelForMediaType(asset.type)} · {formatDate(asset.createdAt)}
 					</Muted>
-					{asset.downloadUrl ? (
-						<Button label="Open" variant="ghost" onPress={() => void Linking.openURL(rewriteDevHost(asset.downloadUrl))} />
-					) : null}
+					<Row>
+						<Button
+							label={busyId === asset.id ? "Working…" : "Open"}
+							variant="ghost"
+							disabled={busyId === asset.id}
+							onPress={() => void onOpen(asset)}
+						/>
+						<Button
+							label="Download"
+							variant="ghost"
+							disabled={busyId === asset.id}
+							onPress={() => void onDownload(asset)}
+						/>
+					</Row>
 					<Button label="Delete" variant="danger" onPress={() => onDelete(asset.id)} />
 				</Card>
 			))}

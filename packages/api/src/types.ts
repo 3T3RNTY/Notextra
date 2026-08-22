@@ -29,7 +29,7 @@ export interface NoteDetail {
 	content: string | null;
 	type: NoteType;
 	status: NoteStatus;
-	attachmentIds: string[];
+	attachmentIds?: string[];
 	tags: NoteTag[];
 	createdAt: string;
 	updatedAt: string;
@@ -95,6 +95,7 @@ export interface CreateNoteRequest {
 export interface UpdateNoteRequest {
 	title: string;
 	content?: string;
+	type?: NoteType;
 	status?: NoteStatus;
 	tagIds?: string[];
 }

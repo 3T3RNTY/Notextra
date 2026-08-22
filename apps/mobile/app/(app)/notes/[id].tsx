@@ -2,31 +2,30 @@ import { ApiRequestError, labelForNoteType, pickerTypesForNoteType, type MediaAs
 import * as DocumentPicker from "expo-document-picker";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-import { Alert, Linking } from "react-native";
-import { api, formatDate, rewriteDevHost, uploadMediaFromUri } from "@/lib/api";
-import { Button, Card, ErrorText, Field, Heading, Input, Muted, Screen, Title } from "@/lib/ui";
+import { Alert } from "react-native";
+import { api, formatDate } from "@/lib/api";
+import { loadNoteAttachments, shareMediaFile, uploadMediaFromUri } from "@/lib/media-file";
+import { Button, Card, ErrorText, Field, Heading, Input, Muted, Row, Screen, Title } from "@/lib/ui";
 
 export default function NoteDetailScreen() {
 	const { id } = useLocalSearchParams<{ id: string }>();
 	const [note, setNote] = useState<NoteDetail | null>(null);
 	const [attachments, setAttachments] = useState<MediaAssetDetail[]>([]);
+	const [library, setLibrary] = useState<MediaAssetDetail[]>([]);
 	const [title, setTitle] = useState("");
 	const [content, setContent] = useState("");
 	const [error, setError] = useState<string | null>(null);
 	const [pending, setPending] = useState(false);
-	const [uploading, setUploading] = useState(false);
+	const [busyFile, setBusyFile] = useState(false);
 
 	async function loadNote(noteId: string) {
 		const loaded = await api.notes.get(noteId);
+		const [attached, all] = await Promise.all([loadNoteAttachments(loaded), api.media.list()]);
 		setNote(loaded);
 		setTitle(loaded.title);
 		setContent(loaded.content ?? "");
-		if (loaded.attachmentIds.length === 0) {
-			setAttachments([]);
-			return;
-		}
-		const assets = await api.media.list();
-		setAttachments(assets.filter((asset) => loaded.attachmentIds.includes(asset.id)));
+		setAttachments(attached);
+		setLibrary(all);
 	}
 
 	useEffect(() => {
@@ -52,36 +51,72 @@ export default function NoteDetailScreen() {
 		}
 	}
 
-	async function onAddFile() {
+	async function onAddFiles() {
 		if (!note) {
 			return;
 		}
 		const result = await DocumentPicker.getDocumentAsync({
 			type: note.type === "TEXT" ? "*/*" : pickerTypesForNoteType(note.type),
 			copyToCacheDirectory: true,
+			multiple: true,
 		});
-		if (result.canceled || !result.assets[0]) {
+		if (result.canceled || result.assets.length === 0) {
 			return;
 		}
-		const picked = result.assets[0];
-		setUploading(true);
+		setBusyFile(true);
 		setError(null);
 		try {
-			const asset = await uploadMediaFromUri({
-				uri: picked.uri,
-				fileName: picked.name,
-				mimeType: picked.mimeType,
-				sizeBytes: picked.size,
-				noteType: note.type,
-			});
-			const updated = await api.notes.attachMedia(note.id, asset.id);
-			setNote(updated);
-			setAttachments((current) => [asset, ...current.filter((item) => item.id !== asset.id)]);
+			for (const picked of result.assets) {
+				const asset = await uploadMediaFromUri({
+					uri: picked.uri,
+					fileName: picked.name,
+					mimeType: picked.mimeType,
+					sizeBytes: picked.size,
+					noteType: note.type,
+				});
+				await api.notes.attachMedia(note.id, asset.id);
+			}
+			await loadNote(note.id);
 		} catch (err) {
-			setError(err instanceof ApiRequestError || err instanceof Error ? err.message : "Upload failed");
+			setError(err instanceof ApiRequestError || err instanceof Error ? err.message : "Could not attach file");
 		} finally {
-			setUploading(false);
+			setBusyFile(false);
 		}
+	}
+
+	async function onAttachExisting(assetId: string) {
+		if (!note) {
+			return;
+		}
+		setBusyFile(true);
+		setError(null);
+		try {
+			await api.notes.attachMedia(note.id, assetId);
+			await loadNote(note.id);
+		} catch (err) {
+			setError(err instanceof Error ? err.message : "Could not attach file");
+		} finally {
+			setBusyFile(false);
+		}
+	}
+
+	function onRemove(assetId: string) {
+		if (!note) {
+			return;
+		}
+		Alert.alert("Remove file", "Remove this file from the note? It stays in Media.", [
+			{ text: "Cancel", style: "cancel" },
+			{
+				text: "Remove",
+				style: "destructive",
+				onPress: () => {
+					void api.notes
+						.detachMedia(note.id, assetId)
+						.then(() => loadNote(note.id))
+						.catch((err) => setError(err instanceof Error ? err.message : "Could not remove file"));
+				},
+			},
+		]);
 	}
 
 	function onDeleteFile(assetId: string) {
@@ -93,13 +128,7 @@ export default function NoteDetailScreen() {
 				onPress: () => {
 					void api.media
 						.delete(assetId)
-						.then(async () => {
-							if (note) {
-								const updated = await api.notes.get(note.id);
-								setNote(updated);
-							}
-							setAttachments((current) => current.filter((asset) => asset.id !== assetId));
-						})
+						.then(() => (note ? loadNote(note.id) : undefined))
 						.catch((err) => setError(err instanceof Error ? err.message : "Could not delete file"));
 				},
 			},
@@ -122,6 +151,8 @@ export default function NoteDetailScreen() {
 		]);
 	}
 
+	const availableLibrary = library.filter((asset) => !(note?.attachmentIds ?? []).includes(asset.id));
+
 	return (
 		<Screen>
 			<Title>Edit note</Title>
@@ -141,16 +172,37 @@ export default function NoteDetailScreen() {
 			</Field>
 			<ErrorText message={error} />
 			<Button label={pending ? "Saving…" : "Save"} onPress={() => void onSave()} disabled={pending} />
-			<Button label={uploading ? "Uploading…" : "Add file"} variant="ghost" onPress={() => void onAddFile()} disabled={uploading} />
+			<Button
+				label={busyFile ? "Working…" : "Add files"}
+				variant="ghost"
+				onPress={() => void onAddFiles()}
+				disabled={busyFile}
+			/>
 			{attachments.map((asset) => (
 				<Card key={asset.id}>
 					<Heading>{asset.fileName}</Heading>
-					<Muted>{formatDate(asset.createdAt)}</Muted>
-					{asset.downloadUrl ? (
-						<Button label="Open" variant="ghost" onPress={() => void Linking.openURL(rewriteDevHost(asset.downloadUrl))} />
-					) : null}
-					<Button label="Delete file" variant="danger" onPress={() => onDeleteFile(asset.id)} />
+					<Muted>
+						{asset.type} · {formatDate(asset.createdAt)}
+					</Muted>
+					<Row>
+						<Button label="Open" variant="ghost" onPress={() => void shareMediaFile(asset, false)} />
+						<Button label="Download" variant="ghost" onPress={() => void shareMediaFile(asset, true)} />
+					</Row>
+					<Row>
+						<Button label="Remove" variant="ghost" onPress={() => onRemove(asset.id)} />
+						<Button label="Delete file" variant="danger" onPress={() => onDeleteFile(asset.id)} />
+					</Row>
 				</Card>
+			))}
+			{availableLibrary.length > 0 ? <Muted>Attach from Media</Muted> : null}
+			{availableLibrary.map((asset) => (
+				<Button
+					key={asset.id}
+					label={`Attach ${asset.fileName}`}
+					variant="ghost"
+					disabled={busyFile}
+					onPress={() => void onAttachExisting(asset.id)}
+				/>
 			))}
 			<Button label="Delete" variant="danger" onPress={onDelete} />
 		</Screen>

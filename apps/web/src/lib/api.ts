@@ -4,6 +4,7 @@ import {
 	inferMediaType,
 	mediaTypeForNoteType,
 	type MediaAssetDetail,
+	type NoteDetail,
 	type NoteType,
 } from "@notextra/api";
 import { webTokenStore } from "./token-store";
@@ -36,13 +37,18 @@ export async function uploadMediaFile(file: File, noteType?: NoteType): Promise<
 		contentType,
 		type,
 	});
-	const put = await fetch(session.uploadUrl, {
-		method: "PUT",
-		headers: { "Content-Type": contentType },
-		body: file,
-	});
-	if (!put.ok) {
-		throw new Error("Upload to storage failed");
-	}
+	await api.media.uploadContent(session.assetId, file, contentType);
 	return api.media.confirmUpload(session.assetId, { sizeBytes: file.size });
+}
+
+export async function loadNoteAttachments(note: NoteDetail): Promise<MediaAssetDetail[]> {
+	const ids = note.attachmentIds ?? [];
+	if (ids.length === 0) {
+		return [];
+	}
+	const assets = await api.media.list();
+	const byId = new Map(assets.map((asset) => [asset.id, asset]));
+	return ids
+		.map((id) => byId.get(id))
+		.filter((asset): asset is MediaAssetDetail => Boolean(asset));
 }

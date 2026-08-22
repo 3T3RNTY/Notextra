@@ -65,7 +65,9 @@ class NotesService implements NotesApi {
 
 	List<NoteDetail> listForCurrentUser(String q, NoteType type, UUID tagId, UUID collectionId) {
 		String query = (q == null || q.isBlank()) ? null : q.trim();
-		List<NoteEntity> notes = noteRepository.search(CurrentUser.id(), query, type, tagId, collectionId);
+		List<NoteEntity> notes = (query == null && type == null && tagId == null && collectionId == null)
+			? noteRepository.findByOwnerIdOrderByUpdatedAtDesc(CurrentUser.id())
+			: noteRepository.search(CurrentUser.id(), query, type, tagId, collectionId);
 		Map<UUID, List<NoteTag>> tagsByNote = loadTagsByNoteIds(
 			notes.stream().map(NoteEntity::getId).toList()
 		);
@@ -83,7 +85,7 @@ class NotesService implements NotesApi {
 			request.type() == null ? NoteType.TEXT : request.type(),
 			NoteStatus.ACTIVE
 		);
-		noteRepository.save(note);
+		noteRepository.saveAndFlush(note);
 		if (request.tagIds() != null && !request.tagIds().isEmpty()) {
 			replaceNoteTags(note.getId(), request.tagIds());
 		}
@@ -100,6 +102,9 @@ class NotesService implements NotesApi {
 		var note = getOwnedEntity(noteId);
 		note.setTitle(request.title());
 		note.setContent(request.content());
+		if (request.type() != null) {
+			note.setType(request.type());
+		}
 		if (request.status() != null) {
 			note.setStatus(request.status());
 		}
@@ -260,7 +265,7 @@ class NotesService implements NotesApi {
 			NoteType.TEXT,
 			NoteStatus.ACTIVE
 		);
-		noteRepository.save(note);
+		noteRepository.saveAndFlush(note);
 		events.publishEvent(new NoteCreated(note.getId(), note.getOwnerId()));
 		return toDetail(note, List.of());
 	}
@@ -387,6 +392,7 @@ class NotesService implements NotesApi {
 	record UpdateNoteRequest(
 		@NotBlank @Size(max = 500) String title,
 		String content,
+		NoteType type,
 		NoteStatus status,
 		List<UUID> tagIds
 	) {

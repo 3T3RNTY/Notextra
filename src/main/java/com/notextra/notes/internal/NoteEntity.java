@@ -57,13 +57,20 @@ class NoteEntity {
 	protected NoteEntity() {
 	}
 
+	NoteEntity(UUID id, UUID ownerId, String title, String content, NoteStatus status) {
+		this(id, ownerId, title, content, NoteType.TEXT, status);
+	}
+
 	NoteEntity(UUID id, UUID ownerId, String title, String content, NoteType type, NoteStatus status) {
 		this.id = id;
 		this.ownerId = ownerId;
 		this.title = title;
 		this.content = content;
-		this.type = type;
+		this.type = type == null ? NoteType.TEXT : type;
 		this.status = status;
+		Instant now = Instant.now();
+		this.createdAt = now;
+		this.updatedAt = now;
 	}
 
 	@PrePersist
@@ -71,6 +78,12 @@ class NoteEntity {
 		Instant now = Instant.now();
 		createdAt = now;
 		updatedAt = now;
+		if (type == null) {
+			type = NoteType.TEXT;
+		}
+		if (attachmentIds == null) {
+			attachmentIds = new LinkedHashSet<>();
+		}
 	}
 
 	@PreUpdate
@@ -103,7 +116,11 @@ class NoteEntity {
 	}
 
 	NoteType getType() {
-		return type;
+		return type == null ? NoteType.TEXT : type;
+	}
+
+	void setType(NoteType type) {
+		this.type = type == null ? NoteType.TEXT : type;
 	}
 
 	NoteStatus getStatus() {
@@ -115,6 +132,9 @@ class NoteEntity {
 	}
 
 	Set<UUID> getAttachmentIds() {
+		if (attachmentIds == null) {
+			attachmentIds = new LinkedHashSet<>();
+		}
 		return attachmentIds;
 	}
 

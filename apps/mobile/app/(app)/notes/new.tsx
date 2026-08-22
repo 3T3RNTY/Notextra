@@ -2,20 +2,22 @@ import { ApiRequestError, NOTE_TYPE_OPTIONS, pickerTypesForNoteType, type NoteTy
 import * as DocumentPicker from "expo-document-picker";
 import { router } from "expo-router";
 import { useState } from "react";
-import { api, uploadMediaFromUri } from "@/lib/api";
-import { Button, Chip, ErrorText, Field, Input, Row, Screen, Title } from "@/lib/ui";
+import { api } from "@/lib/api";
+import { uploadMediaFromUri } from "@/lib/media-file";
+import { Button, Chip, ErrorText, Field, Input, Muted, Row, Screen, Title } from "@/lib/ui";
+
+type PickedFile = {
+	uri: string;
+	name: string;
+	mimeType?: string | null;
+	size?: number | null;
+};
 
 export default function NewNoteScreen() {
 	const [title, setTitle] = useState("");
 	const [content, setContent] = useState("");
 	const [type, setType] = useState<NoteType>("TEXT");
-	const [fileName, setFileName] = useState<string | null>(null);
-	const [picked, setPicked] = useState<{
-		uri: string;
-		name: string;
-		mimeType?: string | null;
-		size?: number | null;
-	} | null>(null);
+	const [files, setFiles] = useState<PickedFile[]>([]);
 	const [error, setError] = useState<string | null>(null);
 	const [pending, setPending] = useState(false);
 
@@ -23,18 +25,19 @@ export default function NewNoteScreen() {
 		const result = await DocumentPicker.getDocumentAsync({
 			type: pickerTypesForNoteType(type),
 			copyToCacheDirectory: true,
+			multiple: true,
 		});
-		if (result.canceled || !result.assets[0]) {
+		if (result.canceled || result.assets.length === 0) {
 			return;
 		}
-		const asset = result.assets[0];
-		setPicked({
-			uri: asset.uri,
-			name: asset.name,
-			mimeType: asset.mimeType,
-			size: asset.size,
-		});
-		setFileName(asset.name);
+		setFiles(
+			result.assets.map((asset) => ({
+				uri: asset.uri,
+				name: asset.name,
+				mimeType: asset.mimeType,
+				size: asset.size,
+			})),
+		);
 	}
 
 	async function onSave() {
@@ -42,12 +45,12 @@ export default function NewNoteScreen() {
 		setPending(true);
 		try {
 			const note = await api.notes.create({ title, content, type });
-			if (picked && type !== "TEXT") {
+			for (const file of files) {
 				const asset = await uploadMediaFromUri({
-					uri: picked.uri,
-					fileName: picked.name,
-					mimeType: picked.mimeType,
-					sizeBytes: picked.size,
+					uri: file.uri,
+					fileName: file.name,
+					mimeType: file.mimeType,
+					sizeBytes: file.size,
 					noteType: type,
 				});
 				await api.notes.attachMedia(note.id, asset.id);
@@ -72,8 +75,7 @@ export default function NewNoteScreen() {
 							active={type === option.value}
 							onPress={() => {
 								setType(option.value);
-								setPicked(null);
-								setFileName(null);
+								setFiles([]);
 							}}
 						/>
 					))}
@@ -90,9 +92,12 @@ export default function NewNoteScreen() {
 					style={{ minHeight: type === "TEXT" ? 160 : 80, textAlignVertical: "top" }}
 				/>
 			</Field>
-			{type !== "TEXT" ? (
-				<Button label={fileName ? `File: ${fileName}` : "Choose file"} variant="ghost" onPress={() => void onPickFile()} />
-			) : null}
+			<Button
+				label={files.length ? `${files.length} file(s) selected` : "Add files"}
+				variant="ghost"
+				onPress={() => void onPickFile()}
+			/>
+			{files.length > 0 ? <Muted>{files.map((file) => file.name).join(", ")}</Muted> : null}
 			<ErrorText message={error} />
 			<Button label={pending ? "Saving…" : "Create"} onPress={() => void onSave()} disabled={pending} />
 		</Screen>
