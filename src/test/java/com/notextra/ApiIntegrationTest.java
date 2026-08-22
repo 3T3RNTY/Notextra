@@ -4,6 +4,7 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -248,5 +249,68 @@ class ApiIntegrationTest {
 			.andExpect(header().string("Content-Disposition", org.hamcrest.Matchers.containsString("attachment")))
 			.andExpect(header().string("Content-Disposition", org.hamcrest.Matchers.containsString("notes.pdf")))
 			.andExpect(content().string("test-bytes"));
+	}
+
+	@Test
+	void attachAndDetachMediaOnNote() throws Exception {
+		var registerBody = objectMapper.createObjectNode()
+			.put("email", "attach@example.com")
+			.put("password", "password123")
+			.put("displayName", "Attach User");
+
+		var registerResponse = mockMvc.perform(post("/api/auth/register")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(registerBody.toString()))
+			.andExpect(status().isOk())
+			.andReturn();
+
+		String token = objectMapper.readTree(registerResponse.getResponse().getContentAsString())
+			.get("accessToken").asText();
+
+		var noteResponse = mockMvc.perform(post("/api/notes")
+				.header("Authorization", "Bearer " + token)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.createObjectNode().put("title", "With file").put("content", "caption").toString()))
+			.andExpect(status().isCreated())
+			.andReturn();
+
+		String noteId = objectMapper.readTree(noteResponse.getResponse().getContentAsString())
+			.get("id").asText();
+
+		var uploadResponse = mockMvc.perform(post("/api/media/uploads")
+				.header("Authorization", "Bearer " + token)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.createObjectNode()
+					.put("fileName", "scan.pdf")
+					.put("contentType", "application/pdf")
+					.put("type", "DOCUMENT")
+					.toString()))
+			.andExpect(status().isCreated())
+			.andReturn();
+
+		String assetId = objectMapper.readTree(uploadResponse.getResponse().getContentAsString())
+			.get("assetId").asText();
+
+		mockMvc.perform(put("/api/media/" + assetId + "/content")
+				.header("Authorization", "Bearer " + token)
+				.contentType(MediaType.APPLICATION_PDF)
+				.content("pdf-bytes"))
+			.andExpect(status().isNoContent());
+
+		mockMvc.perform(post("/api/media/" + assetId + "/confirm")
+				.header("Authorization", "Bearer " + token)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.createObjectNode().put("sizeBytes", 9).toString()))
+			.andExpect(status().isOk());
+
+		mockMvc.perform(post("/api/notes/" + noteId + "/attachments/" + assetId)
+				.header("Authorization", "Bearer " + token))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.attachmentIds[0]").value(assetId));
+
+		mockMvc.perform(delete("/api/notes/" + noteId + "/attachments/" + assetId)
+				.header("Authorization", "Bearer " + token))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.attachmentIds.length()").value(0));
 	}
 }

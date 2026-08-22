@@ -16,7 +16,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -80,5 +82,16 @@ class MediaController {
 			headers.setContentLength(file.sizeBytes());
 		}
 		return new ResponseEntity<>(new InputStreamResource(file.body()), headers, HttpStatus.OK);
+	}
+
+	@PutMapping("/{assetId}/content")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	void uploadContent(
+		@PathVariable UUID assetId,
+		@RequestHeader(value = HttpHeaders.CONTENT_TYPE, required = false) String contentType,
+		@RequestHeader(HttpHeaders.CONTENT_LENGTH) long contentLength,
+		jakarta.servlet.ServletInputStream body
+	) throws java.io.IOException {
+		mediaService.putContent(assetId, body, contentType, contentLength);
 	}
 }

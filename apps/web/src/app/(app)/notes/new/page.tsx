@@ -4,12 +4,13 @@ import { ApiRequestError } from "@notextra/api";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { Button, Field, Input, PageHeader, Textarea } from "@/components/ui";
-import { api } from "@/lib/api";
+import { api, uploadMediaFile } from "@/lib/api";
 
 export default function NewNotePage() {
 	const router = useRouter();
 	const [title, setTitle] = useState("");
 	const [content, setContent] = useState("");
+	const [files, setFiles] = useState<File[]>([]);
 	const [error, setError] = useState<string | null>(null);
 	const [pending, setPending] = useState(false);
 
@@ -19,6 +20,10 @@ export default function NewNotePage() {
 		setPending(true);
 		try {
 			const note = await api.notes.create({ title, content });
+			for (const file of files) {
+				const asset = await uploadMediaFile(file);
+				await api.notes.attachMedia(note.id, asset.id);
+			}
 			router.replace(`/notes/${note.id}`);
 		} catch (err) {
 			setError(err instanceof ApiRequestError ? err.message : "Could not create note");
@@ -37,6 +42,16 @@ export default function NewNotePage() {
 				<Field label="Content">
 					<Textarea rows={12} value={content} onChange={(e) => setContent(e.target.value)} />
 				</Field>
+				<Field label="Files">
+					<Input
+						type="file"
+						multiple
+						onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
+					/>
+				</Field>
+				{files.length > 0 ? (
+					<p className="text-sm text-muted">{files.map((file) => file.name).join(", ")}</p>
+				) : null}
 				{error ? <p className="text-sm text-danger">{error}</p> : null}
 				<Button type="submit" disabled={pending}>
 					{pending ? "Saving…" : "Create"}

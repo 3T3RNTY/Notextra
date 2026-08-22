@@ -64,6 +64,11 @@ class NoteController {
 		return notesService.attachMedia(noteId, mediaAssetId);
 	}
 
+	@DeleteMapping("/{noteId}/attachments/{mediaAssetId}")
+	NoteDetail detachMedia(@PathVariable UUID noteId, @PathVariable UUID mediaAssetId) {
+		return notesService.detachMedia(noteId, mediaAssetId);
+	}
+
 	@PostMapping("/{noteId}/tags/{tagId}")
 	NoteDetail attachTag(@PathVariable UUID noteId, @PathVariable UUID tagId) {
 		return notesService.attachTag(noteId, tagId);

@@ -111,6 +111,12 @@ class NotesService implements NotesApi {
 		return toDetail(note, tagsForNote(noteId));
 	}
 
+	NoteDetail detachMedia(UUID noteId, UUID mediaAssetId) {
+		var note = getOwnedEntity(noteId);
+		note.getAttachmentIds().remove(mediaAssetId);
+		return toDetail(note, tagsForNote(noteId));
+	}
+
 	NoteDetail attachTag(UUID noteId, UUID tagId) {
 		getOwnedEntity(noteId);
 		var tag = getOwnedTag(tagId);

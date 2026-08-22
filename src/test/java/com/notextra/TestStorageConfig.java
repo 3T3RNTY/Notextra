@@ -21,6 +21,12 @@ public class TestStorageConfig {
 			.thenAnswer(invocation -> "https://storage.test/download/" + invocation.getArgument(0));
 		Mockito.when(storage.getObject(Mockito.anyString()))
 			.thenAnswer(invocation -> new ByteArrayInputStream("test-bytes".getBytes(StandardCharsets.UTF_8)));
+		Mockito.doNothing().when(storage).putObject(
+			Mockito.anyString(),
+			Mockito.any(),
+			Mockito.any(),
+			Mockito.anyLong()
+		);
 		return storage;
 	}
 }

@@ -92,6 +92,16 @@ class MediaService implements MediaApi {
 		);
 	}
 
+	void putContent(UUID assetId, java.io.InputStream body, String contentType, long sizeBytes) {
+		var asset = getOwnedEntity(assetId);
+		objectStorageService.putObject(
+			asset.getStorageKey(),
+			body,
+			contentType == null || contentType.isBlank() ? asset.getContentType() : contentType,
+			sizeBytes
+		);
+	}
+
 	@Override
 	@Transactional(readOnly = true)
 	public Optional<MediaAssetRef> findById(UUID assetId) {

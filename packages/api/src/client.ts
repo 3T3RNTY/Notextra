@@ -180,6 +180,10 @@ export function createApiClient(options: ApiClientOptions) {
 				request<import("./types").NoteDetail>(`/api/notes/${noteId}/attachments/${mediaAssetId}`, {
 					method: "POST",
 				}),
+			detachMedia: (noteId: string, mediaAssetId: string) =>
+				request<import("./types").NoteDetail>(`/api/notes/${noteId}/attachments/${mediaAssetId}`, {
+					method: "DELETE",
+				}),
 			attachTag: (noteId: string, tagId: string) =>
 				request<import("./types").NoteDetail>(`/api/notes/${noteId}/tags/${tagId}`, { method: "POST" }),
 			detachTag: (noteId: string, tagId: string) =>
@@ -239,6 +243,20 @@ export function createApiClient(options: ApiClientOptions) {
 					throw new ApiRequestError(response.status, errorMessage(body, response.statusText), body);
 				}
 				return response.blob();
+			},
+			uploadContent: async (assetId: string, body: Blob, contentType: string) => {
+				const response = await authorizedFetch(`/api/media/${assetId}/content`, {
+					method: "PUT",
+					headers: {
+						"Content-Type": contentType || "application/octet-stream",
+						"Content-Length": String(body.size),
+					},
+					body,
+				});
+				if (!response.ok && response.status !== 204) {
+					const parsed = await readBody(response);
+					throw new ApiRequestError(response.status, errorMessage(parsed, response.statusText), parsed);
+				}
 			},
 		},
 		generation: {

@@ -58,7 +58,12 @@ export default function NotesPage() {
 						<Card className="hover:border-accent">
 							<h2 className="font-medium">{note.title}</h2>
 							<p className="mt-1 line-clamp-2 text-sm text-muted">{note.content || "No content"}</p>
-							<p className="mt-2 text-xs text-muted">{formatDate(note.updatedAt)}</p>
+							<p className="mt-2 text-xs text-muted">
+								{formatDate(note.updatedAt)}
+								{note.attachmentIds.length > 0
+									? ` · ${note.attachmentIds.length} file${note.attachmentIds.length === 1 ? "" : "s"}`
+									: ""}
+							</p>
 						</Card>
 					</Link>
 				))}

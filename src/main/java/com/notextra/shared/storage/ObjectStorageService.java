@@ -3,6 +3,7 @@ package com.notextra.shared.storage;
 import com.notextra.shared.NotextraProperties;
 import java.time.Duration;
 import org.springframework.stereotype.Service;
+import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
@@ -61,6 +62,19 @@ public class ObjectStorageService {
 			.bucket(properties.storage().bucket())
 			.key(storageKey)
 			.build());
+	}
+
+	public void putObject(String storageKey, java.io.InputStream body, String contentType, long contentLength) {
+		ensureBucketExists();
+		s3Client.putObject(
+			PutObjectRequest.builder()
+				.bucket(properties.storage().bucket())
+				.key(storageKey)
+				.contentType(contentType)
+				.contentLength(contentLength)
+				.build(),
+			RequestBody.fromInputStream(body, contentLength)
+		);
 	}
 
 	private S3Presigner buildPresigner() {

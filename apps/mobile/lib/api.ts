@@ -54,3 +54,25 @@ export function formatDate(value: string | null | undefined): string {
 	}
 	return date.toLocaleString();
 }
+
+export function inferMediaType(contentType: string, fileName = ""): "IMAGE" | "AUDIO" | "VIDEO" | "DOCUMENT" | "OTHER" {
+	const lowerName = fileName.toLowerCase();
+	if (contentType.startsWith("image/") || /\.(png|jpe?g|gif|webp|heic|bmp)$/i.test(lowerName)) {
+		return "IMAGE";
+	}
+	if (contentType.startsWith("audio/") || /\.(mp3|wav|m4a|aac|ogg|flac)$/i.test(lowerName)) {
+		return "AUDIO";
+	}
+	if (contentType.startsWith("video/") || /\.(mp4|mov|webm|mkv|avi)$/i.test(lowerName)) {
+		return "VIDEO";
+	}
+	if (
+		contentType.startsWith("text/") ||
+		contentType.includes("pdf") ||
+		contentType.includes("document") ||
+		/\.(pdf|docx?|txt|rtf)$/i.test(lowerName)
+	) {
+		return "DOCUMENT";
+	}
+	return "OTHER";
+}

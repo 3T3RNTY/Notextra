@@ -1,7 +1,7 @@
-import type { MediaAssetDetail } from "@notextra/api";
+import type { MediaAssetDetail, NoteDetail } from "@notextra/api";
 import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
-import { api } from "./api";
+import { api, inferMediaType } from "./api";
 
 function sanitizeFileName(fileName: string): string {
 	const trimmed = fileName.trim() || "download";
@@ -33,4 +33,33 @@ export async function shareMediaFile(asset: MediaAssetDetail, persist = false): 
 		mimeType: asset.contentType || undefined,
 		dialogTitle: asset.fileName,
 	});
+}
+
+export async function loadNoteAttachments(note: NoteDetail): Promise<MediaAssetDetail[]> {
+	if (note.attachmentIds.length === 0) {
+		return [];
+	}
+	const assets = await api.media.list();
+	const byId = new Map(assets.map((asset) => [asset.id, asset]));
+	return note.attachmentIds
+		.map((id) => byId.get(id))
+		.filter((asset): asset is MediaAssetDetail => Boolean(asset));
+}
+
+export async function uploadMediaFromUri(input: {
+	uri: string;
+	fileName: string;
+	mimeType?: string | null;
+	sizeBytes?: number | null;
+}): Promise<MediaAssetDetail> {
+	const contentType = input.mimeType || "application/octet-stream";
+	const session = await api.media.initiateUpload({
+		fileName: input.fileName,
+		contentType,
+		type: inferMediaType(contentType, input.fileName),
+	});
+	const fileResponse = await fetch(input.uri);
+	const body = await fileResponse.blob();
+	await api.media.uploadContent(session.assetId, body, contentType);
+	return api.media.confirmUpload(session.assetId, { sizeBytes: input.sizeBytes ?? body.size });
 }

@@ -42,7 +42,12 @@ export default function NotesScreen() {
 				<Card key={note.id} onPress={() => router.push(`/(app)/notes/${note.id}`)}>
 					<Heading>{note.title}</Heading>
 					<Muted>{note.content || "No content"}</Muted>
-					<Muted>{formatDate(note.updatedAt)}</Muted>
+					<Muted>
+						{formatDate(note.updatedAt)}
+						{note.attachmentIds.length > 0
+							? ` · ${note.attachmentIds.length} file${note.attachmentIds.length === 1 ? "" : "s"}`
+							: ""}
+					</Muted>
 				</Card>
 			))}
 		</Screen>

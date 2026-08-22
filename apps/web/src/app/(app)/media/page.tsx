@@ -3,7 +3,7 @@
 import { ApiRequestError, type MediaAssetDetail } from "@notextra/api";
 import { ChangeEvent, useEffect, useState } from "react";
 import { Button, Card, PageHeader, StatusMessage } from "@/components/ui";
-import { api, formatDate, inferMediaType } from "@/lib/api";
+import { api, formatDate, uploadMediaFile } from "@/lib/api";
 import { downloadMediaFile, openMediaInBrowser } from "@/lib/media-file";
 
 export default function MediaPage() {
@@ -38,20 +38,7 @@ export default function MediaPage() {
 		setUploading(true);
 		setError(null);
 		try {
-			const session = await api.media.initiateUpload({
-				fileName: file.name,
-				contentType: file.type || "application/octet-stream",
-				type: inferMediaType(file.type),
-			});
-			const put = await fetch(session.uploadUrl, {
-				method: "PUT",
-				headers: { "Content-Type": file.type || "application/octet-stream" },
-				body: file,
-			});
-			if (!put.ok) {
-				throw new Error("Upload to storage failed");
-			}
-			await api.media.confirmUpload(session.assetId, { sizeBytes: file.size });
+			await uploadMediaFile(file);
 			await load();
 		} catch (err) {
 			setError(err instanceof ApiRequestError || err instanceof Error ? err.message : "Upload failed");
