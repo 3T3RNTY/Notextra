@@ -55,6 +55,14 @@ public class ObjectStorageService {
 		}
 	}
 
+	public java.io.InputStream getObject(String storageKey) {
+		ensureBucketExists();
+		return s3Client.getObject(GetObjectRequest.builder()
+			.bucket(properties.storage().bucket())
+			.key(storageKey)
+			.build());
+	}
+
 	private S3Presigner buildPresigner() {
 		var storage = properties.storage();
 		return S3Presigner.builder()

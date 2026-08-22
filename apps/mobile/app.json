@@ -11,11 +11,17 @@
       "expo-secure-store"
     ],
     "android": {
-      "package": "com.notextra.app"
+      "package": "com.notextra.app",
+      "usesCleartextTraffic": true
     },
     "ios": {
       "bundleIdentifier": "com.notextra.app",
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSAppTransportSecurity": {
+          "NSAllowsLocalNetworking": true
+        }
+      }
     }
   }
 }

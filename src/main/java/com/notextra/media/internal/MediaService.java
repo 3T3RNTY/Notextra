@@ -81,6 +81,17 @@ class MediaService implements MediaApi {
 		return toDetail(getOwnedEntity(assetId));
 	}
 
+	@Transactional(readOnly = true)
+	MediaContent openContent(UUID assetId) {
+		var asset = getOwnedEntity(assetId);
+		return new MediaContent(
+			asset.getFileName(),
+			asset.getContentType(),
+			asset.getSizeBytes(),
+			objectStorageService.getObject(asset.getStorageKey())
+		);
+	}
+
 	@Override
 	@Transactional(readOnly = true)
 	public Optional<MediaAssetRef> findById(UUID assetId) {
@@ -172,5 +183,8 @@ class MediaService implements MediaApi {
 	}
 
 	record UploadSessionResponse(UUID assetId, String uploadUrl, String storageKey) {
+	}
+
+	record MediaContent(String fileName, String contentType, Long sizeBytes, java.io.InputStream body) {
 	}
 }

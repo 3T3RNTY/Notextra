@@ -4,12 +4,14 @@ import { ApiRequestError, type MediaAssetDetail } from "@notextra/api";
 import { ChangeEvent, useEffect, useState } from "react";
 import { Button, Card, PageHeader, StatusMessage } from "@/components/ui";
 import { api, formatDate, inferMediaType } from "@/lib/api";
+import { downloadMediaFile, openMediaInBrowser } from "@/lib/media-file";
 
 export default function MediaPage() {
 	const [assets, setAssets] = useState<MediaAssetDetail[]>([]);
 	const [error, setError] = useState<string | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [uploading, setUploading] = useState(false);
+	const [busyId, setBusyId] = useState<string | null>(null);
 
 	async function load() {
 		setError(null);
@@ -58,6 +60,30 @@ export default function MediaPage() {
 		}
 	}
 
+	async function onOpen(asset: MediaAssetDetail) {
+		setBusyId(asset.id);
+		setError(null);
+		try {
+			await openMediaInBrowser(asset);
+		} catch (err) {
+			setError(err instanceof Error ? err.message : "Could not open file");
+		} finally {
+			setBusyId(null);
+		}
+	}
+
+	async function onDownload(asset: MediaAssetDetail) {
+		setBusyId(asset.id);
+		setError(null);
+		try {
+			await downloadMediaFile(asset);
+		} catch (err) {
+			setError(err instanceof Error ? err.message : "Could not download file");
+		} finally {
+			setBusyId(null);
+		}
+	}
+
 	return (
 		<div>
 			<PageHeader
@@ -82,11 +108,14 @@ export default function MediaPage() {
 								{asset.type} · {formatDate(asset.createdAt)}
 							</p>
 						</div>
-						{asset.downloadUrl ? (
-							<a href={asset.downloadUrl} className="text-sm text-accent underline" target="_blank" rel="noreferrer">
-								Open
-							</a>
-						) : null}
+						<div className="flex shrink-0 items-center gap-2">
+							<Button variant="ghost" disabled={busyId === asset.id} onClick={() => void onOpen(asset)}>
+								{busyId === asset.id ? "…" : "Open"}
+							</Button>
+							<Button variant="ghost" disabled={busyId === asset.id} onClick={() => void onDownload(asset)}>
+								Download
+							</Button>
+						</div>
 					</Card>
 				))}
 			</div>
