@@ -133,7 +133,7 @@ export default function NoteDetailScreen() {
 		]);
 	}
 
-	const availableLibrary = library.filter((asset) => !note?.attachmentIds.includes(asset.id));
+	const availableLibrary = library.filter((asset) => !(note?.attachmentIds ?? []).includes(asset.id));
 
 	return (
 		<Screen>

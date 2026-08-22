@@ -16,7 +16,8 @@ export default function NotesPage() {
 		setError(null);
 		setLoading(true);
 		try {
-			setNotes(await api.notes.list({ q: q || undefined }));
+			const result = await api.notes.list({ q: q || undefined });
+			setNotes(Array.isArray(result) ? result : []);
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "Failed to load notes");
 		} finally {
@@ -53,20 +54,21 @@ export default function NotesPage() {
 			{loading ? <p className="text-sm text-muted">Loading…</p> : null}
 			<StatusMessage error={error} empty={!loading && notes.length === 0 ? "No notes yet." : null} />
 			<div className="grid gap-3">
-				{notes.map((note) => (
+				{notes.map((note) => {
+					const fileCount = note.attachmentIds?.length ?? 0;
+					return (
 					<Link key={note.id} href={`/notes/${note.id}`}>
 						<Card className="hover:border-accent">
 							<h2 className="font-medium">{note.title}</h2>
 							<p className="mt-1 line-clamp-2 text-sm text-muted">{note.content || "No content"}</p>
 							<p className="mt-2 text-xs text-muted">
 								{formatDate(note.updatedAt)}
-								{note.attachmentIds.length > 0
-									? ` · ${note.attachmentIds.length} file${note.attachmentIds.length === 1 ? "" : "s"}`
-									: ""}
+								{fileCount > 0 ? ` · ${fileCount} file${fileCount === 1 ? "" : "s"}` : ""}
 							</p>
 						</Card>
 					</Link>
-				))}
+					);
+				})}
 			</div>
 		</div>
 	);

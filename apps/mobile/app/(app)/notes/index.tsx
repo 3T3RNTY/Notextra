@@ -14,7 +14,8 @@ export default function NotesScreen() {
 		setError(null);
 		setLoading(true);
 		try {
-			setNotes(await api.notes.list({ q: q || undefined }));
+			const result = await api.notes.list({ q: q || undefined });
+			setNotes(Array.isArray(result) ? result : []);
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "Failed to load notes");
 		} finally {
@@ -38,18 +39,19 @@ export default function NotesScreen() {
 			<Input placeholder="Search" value={query} onChangeText={setQuery} onSubmitEditing={() => void load(query)} />
 			<ErrorText message={error} />
 			{notes.length === 0 && !loading ? <Muted>No notes yet.</Muted> : null}
-			{notes.map((note) => (
+			{notes.map((note) => {
+				const fileCount = note.attachmentIds?.length ?? 0;
+				return (
 				<Card key={note.id} onPress={() => router.push(`/(app)/notes/${note.id}`)}>
 					<Heading>{note.title}</Heading>
 					<Muted>{note.content || "No content"}</Muted>
 					<Muted>
 						{formatDate(note.updatedAt)}
-						{note.attachmentIds.length > 0
-							? ` · ${note.attachmentIds.length} file${note.attachmentIds.length === 1 ? "" : "s"}`
-							: ""}
+						{fileCount > 0 ? ` · ${fileCount} file${fileCount === 1 ? "" : "s"}` : ""}
 					</Muted>
 				</Card>
-			))}
+				);
+			})}
 		</Screen>
 	);
 }

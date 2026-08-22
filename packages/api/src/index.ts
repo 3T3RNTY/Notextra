@@ -19,6 +19,7 @@ export type {
 	NoteDetail,
 	NoteStatus,
 	NoteTag,
+	NoteType,
 	RegisterRequest,
 	TokenStore,
 	UpdateCollectionRequest,

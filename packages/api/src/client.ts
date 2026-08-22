@@ -163,9 +163,14 @@ export function createApiClient(options: ApiClientOptions) {
 			me: () => request<import("./types").UserProfile>("/api/auth/me"),
 		},
 		notes: {
-			list: (params?: { q?: string; tagId?: string; collectionId?: string }) =>
+			list: (params?: { q?: string; tagId?: string; collectionId?: string; type?: string }) =>
 				request<import("./types").NoteDetail[]>(
-					`/api/notes${query({ q: params?.q, tagId: params?.tagId, collectionId: params?.collectionId })}`,
+					`/api/notes${query({
+						q: params?.q,
+						tagId: params?.tagId,
+						collectionId: params?.collectionId,
+						type: params?.type,
+					})}`,
 				),
 			get: (noteId: string) => request<import("./types").NoteDetail>(`/api/notes/${noteId}`),
 			create: (body: import("./types").CreateNoteRequest) =>
@@ -249,7 +254,6 @@ export function createApiClient(options: ApiClientOptions) {
 					method: "PUT",
 					headers: {
 						"Content-Type": contentType || "application/octet-stream",
-						"Content-Length": String(body.size),
 					},
 					body,
 				});

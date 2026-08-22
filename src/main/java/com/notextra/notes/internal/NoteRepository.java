@@ -1,5 +1,6 @@
 package com.notextra.notes.internal;
 
+import com.notextra.notes.api.NoteType;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -21,12 +22,14 @@ interface NoteRepository extends JpaRepository<NoteEntity, UUID> {
 		AND (:collectionId IS NULL OR EXISTS (
 			SELECT 1 FROM CollectionNoteEntity cn WHERE cn.noteId = n.id AND cn.collectionId = :collectionId
 		))
+		AND (:type IS NULL OR n.type = :type)
 		ORDER BY n.updatedAt DESC
 		""")
 	List<NoteEntity> search(
 		@Param("ownerId") UUID ownerId,
 		@Param("q") String q,
 		@Param("tagId") UUID tagId,
-		@Param("collectionId") UUID collectionId
+		@Param("collectionId") UUID collectionId,
+		@Param("type") NoteType type
 	);
 }

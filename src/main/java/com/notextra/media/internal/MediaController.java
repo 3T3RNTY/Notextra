@@ -89,9 +89,14 @@ class MediaController {
 	void uploadContent(
 		@PathVariable UUID assetId,
 		@RequestHeader(value = HttpHeaders.CONTENT_TYPE, required = false) String contentType,
-		@RequestHeader(HttpHeaders.CONTENT_LENGTH) long contentLength,
 		jakarta.servlet.ServletInputStream body
 	) throws java.io.IOException {
-		mediaService.putContent(assetId, body, contentType, contentLength);
+		byte[] bytes = body.readAllBytes();
+		mediaService.putContent(
+			assetId,
+			new java.io.ByteArrayInputStream(bytes),
+			contentType,
+			bytes.length
+		);
 	}
 }

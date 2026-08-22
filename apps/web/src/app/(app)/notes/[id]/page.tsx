@@ -117,7 +117,7 @@ export default function NoteDetailPage() {
 		router.replace("/");
 	}
 
-	const availableLibrary = library.filter((asset) => !note?.attachmentIds.includes(asset.id));
+	const availableLibrary = library.filter((asset) => !(note?.attachmentIds ?? []).includes(asset.id));
 
 	if (!note && !error) {
 		return <p className="text-sm text-muted">Loading…</p>;

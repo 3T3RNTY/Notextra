@@ -9,6 +9,7 @@ public record NoteDetail(
 	UUID ownerId,
 	String title,
 	String content,
+	NoteType type,
 	NoteStatus status,
 	List<UUID> attachmentIds,
 	List<NoteTag> tags,

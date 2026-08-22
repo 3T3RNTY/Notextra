@@ -51,12 +51,13 @@ export async function uploadMediaFile(file: File): Promise<MediaAssetDetail> {
 }
 
 export async function loadNoteAttachments(note: NoteDetail): Promise<MediaAssetDetail[]> {
-	if (note.attachmentIds.length === 0) {
+	const ids = note.attachmentIds ?? [];
+	if (ids.length === 0) {
 		return [];
 	}
 	const assets = await api.media.list();
 	const byId = new Map(assets.map((asset) => [asset.id, asset]));
-	return note.attachmentIds
+	return ids
 		.map((id) => byId.get(id))
 		.filter((asset): asset is MediaAssetDetail => Boolean(asset));
 }

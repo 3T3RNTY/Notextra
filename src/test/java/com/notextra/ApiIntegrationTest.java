@@ -68,7 +68,9 @@ class ApiIntegrationTest {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(noteBody.toString()))
 			.andExpect(status().isCreated())
-			.andExpect(jsonPath("$.title").value("My first note"));
+			.andExpect(jsonPath("$.title").value("My first note"))
+			.andExpect(jsonPath("$.type").value("TEXT"))
+			.andExpect(jsonPath("$.createdAt").isNotEmpty());
 
 		mockMvc.perform(get("/api/notes")
 				.header("Authorization", "Bearer " + token))

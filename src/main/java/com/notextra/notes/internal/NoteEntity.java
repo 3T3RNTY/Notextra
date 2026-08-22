@@ -1,6 +1,7 @@
 package com.notextra.notes.internal;
 
 import com.notextra.notes.api.NoteStatus;
+import com.notextra.notes.api.NoteType;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
@@ -35,6 +36,10 @@ class NoteEntity {
 	private String content;
 
 	@Enumerated(EnumType.STRING)
+	@Column(name = "note_type", nullable = false, length = 50)
+	private NoteType type;
+
+	@Enumerated(EnumType.STRING)
 	@Column(nullable = false, length = 50)
 	private NoteStatus status;
 
@@ -53,11 +58,19 @@ class NoteEntity {
 	}
 
 	NoteEntity(UUID id, UUID ownerId, String title, String content, NoteStatus status) {
+		this(id, ownerId, title, content, status, NoteType.TEXT);
+	}
+
+	NoteEntity(UUID id, UUID ownerId, String title, String content, NoteStatus status, NoteType type) {
 		this.id = id;
 		this.ownerId = ownerId;
 		this.title = title;
 		this.content = content;
 		this.status = status;
+		this.type = type == null ? NoteType.TEXT : type;
+		Instant now = Instant.now();
+		this.createdAt = now;
+		this.updatedAt = now;
 	}
 
 	@PrePersist
@@ -65,6 +78,12 @@ class NoteEntity {
 		Instant now = Instant.now();
 		createdAt = now;
 		updatedAt = now;
+		if (type == null) {
+			type = NoteType.TEXT;
+		}
+		if (attachmentIds == null) {
+			attachmentIds = new LinkedHashSet<>();
+		}
 	}
 
 	@PreUpdate
@@ -92,6 +111,14 @@ class NoteEntity {
 		return content;
 	}
 
+	NoteType getType() {
+		return type == null ? NoteType.TEXT : type;
+	}
+
+	void setType(NoteType type) {
+		this.type = type == null ? NoteType.TEXT : type;
+	}
+
 	void setContent(String content) {
 		this.content = content;
 	}
@@ -105,6 +132,9 @@ class NoteEntity {
 	}
 
 	Set<UUID> getAttachmentIds() {
+		if (attachmentIds == null) {
+			attachmentIds = new LinkedHashSet<>();
+		}
 		return attachmentIds;
 	}
 

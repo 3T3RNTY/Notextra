@@ -1,4 +1,5 @@
 export type NoteStatus = "DRAFT" | "ACTIVE" | "ARCHIVED";
+export type NoteType = "TEXT" | "IMAGE" | "AUDIO" | "VIDEO" | "DOCUMENT";
 export type MediaType = "IMAGE" | "AUDIO" | "VIDEO" | "DOCUMENT" | "OTHER";
 export type GenerationOutputType = "NOTE" | "PRESENTATION" | "TRANSCRIPT" | "MARKDOWN" | "PDF";
 export type GenerationJobStatus = "QUEUED" | "PROCESSING" | "COMPLETED" | "FAILED";
@@ -26,8 +27,9 @@ export interface NoteDetail {
 	ownerId: string;
 	title: string;
 	content: string | null;
+	type?: NoteType;
 	status: NoteStatus;
-	attachmentIds: string[];
+	attachmentIds?: string[];
 	tags: NoteTag[];
 	createdAt: string;
 	updatedAt: string;
@@ -86,12 +88,14 @@ export interface LoginRequest {
 export interface CreateNoteRequest {
 	title: string;
 	content?: string;
+	type?: NoteType;
 	tagIds?: string[];
 }
 
 export interface UpdateNoteRequest {
 	title: string;
 	content?: string;
+	type?: NoteType;
 	status?: NoteStatus;
 	tagIds?: string[];
 }

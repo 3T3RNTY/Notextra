@@ -42,9 +42,21 @@ public class SecurityConfig {
 	@Bean
 	CorsConfigurationSource corsConfigurationSource(NotextraProperties properties) {
 		CorsConfiguration config = new CorsConfiguration();
-		config.setAllowedOrigins(properties.cors().allowedOrigins());
+		config.setAllowedOriginPatterns(List.of(
+			"http://localhost:*",
+			"http://127.0.0.1:*",
+			"http://192.168.*:*",
+			"http://10.*:*",
+			"http://172.*:*"
+		));
+		if (properties.cors() != null && properties.cors().allowedOrigins() != null) {
+			for (String origin : properties.cors().allowedOrigins()) {
+				config.addAllowedOriginPattern(origin);
+			}
+		}
 		config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-		config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "Origin"));
+		config.setAllowedHeaders(List.of("*"));
+		config.setExposedHeaders(List.of("Content-Disposition", "Content-Type", "Content-Length"));
 		config.setAllowCredentials(true);
 		config.setMaxAge(3600L);
 		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

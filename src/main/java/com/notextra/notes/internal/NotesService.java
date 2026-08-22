@@ -5,6 +5,7 @@ import com.notextra.notes.api.NoteDetail;
 import com.notextra.notes.api.NoteStatus;
 import com.notextra.notes.api.NoteSummary;
 import com.notextra.notes.api.NoteTag;
+import com.notextra.notes.api.NoteType;
 import com.notextra.notes.api.NotesApi;
 import com.notextra.shared.security.CurrentUser;
 import com.notextra.shared.web.BadRequestException;
@@ -55,9 +56,11 @@ class NotesService implements NotesApi {
 		this.events = events;
 	}
 
-	List<NoteDetail> listForCurrentUser(String q, UUID tagId, UUID collectionId) {
+	List<NoteDetail> listForCurrentUser(String q, UUID tagId, UUID collectionId, NoteType type) {
 		String query = (q == null || q.isBlank()) ? null : q.trim();
-		List<NoteEntity> notes = noteRepository.search(CurrentUser.id(), query, tagId, collectionId);
+		List<NoteEntity> notes = (query == null && tagId == null && collectionId == null && type == null)
+			? noteRepository.findByOwnerIdOrderByUpdatedAtDesc(CurrentUser.id())
+			: noteRepository.search(CurrentUser.id(), query, tagId, collectionId, type);
 		Map<UUID, List<NoteTag>> tagsByNote = loadTagsByNoteIds(
 			notes.stream().map(NoteEntity::getId).toList()
 		);
@@ -72,9 +75,10 @@ class NotesService implements NotesApi {
 			CurrentUser.id(),
 			request.title(),
 			request.content(),
-			NoteStatus.ACTIVE
+			NoteStatus.ACTIVE,
+			request.type()
 		);
-		noteRepository.save(note);
+		noteRepository.saveAndFlush(note);
 		if (request.tagIds() != null && !request.tagIds().isEmpty()) {
 			replaceNoteTags(note.getId(), request.tagIds());
 		}
@@ -91,6 +95,9 @@ class NotesService implements NotesApi {
 		var note = getOwnedEntity(noteId);
 		note.setTitle(request.title());
 		note.setContent(request.content());
+		if (request.type() != null) {
+			note.setType(request.type());
+		}
 		if (request.status() != null) {
 			note.setStatus(request.status());
 		}
@@ -237,7 +244,7 @@ class NotesService implements NotesApi {
 			content,
 			NoteStatus.ACTIVE
 		);
-		noteRepository.save(note);
+		noteRepository.saveAndFlush(note);
 		events.publishEvent(new NoteCreated(note.getId(), note.getOwnerId()));
 		return toDetail(note, List.of());
 	}
@@ -332,6 +339,7 @@ class NotesService implements NotesApi {
 			note.getOwnerId(),
 			note.getTitle(),
 			note.getContent(),
+			note.getType(),
 			note.getStatus(),
 			List.copyOf(note.getAttachmentIds()),
 			tags,
@@ -343,6 +351,7 @@ class NotesService implements NotesApi {
 	record CreateNoteRequest(
 		@NotBlank @Size(max = 500) String title,
 		String content,
+		NoteType type,
 		List<UUID> tagIds
 	) {
 	}
@@ -350,6 +359,7 @@ class NotesService implements NotesApi {
 	record UpdateNoteRequest(
 		@NotBlank @Size(max = 500) String title,
 		String content,
+		NoteType type,
 		NoteStatus status,
 		List<UUID> tagIds
 	) {

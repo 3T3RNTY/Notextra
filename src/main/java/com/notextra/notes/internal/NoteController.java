@@ -1,6 +1,7 @@
 package com.notextra.notes.internal;
 
 import com.notextra.notes.api.NoteDetail;
+import com.notextra.notes.api.NoteType;
 import com.notextra.notes.internal.NotesService.CreateNoteRequest;
 import com.notextra.notes.internal.NotesService.UpdateNoteRequest;
 import jakarta.validation.Valid;
@@ -32,9 +33,10 @@ class NoteController {
 	List<NoteDetail> list(
 		@RequestParam(required = false) String q,
 		@RequestParam(required = false) UUID tagId,
-		@RequestParam(required = false) UUID collectionId
+		@RequestParam(required = false) UUID collectionId,
+		@RequestParam(required = false) NoteType type
 	) {
-		return notesService.listForCurrentUser(q, tagId, collectionId);
+		return notesService.listForCurrentUser(q, tagId, collectionId, type);
 	}
 
 	@PostMapping
