@@ -76,7 +76,13 @@ export function createApiClient(options: ApiClientOptions) {
 			headers.set("Authorization", `Bearer ${accessToken}`);
 		}
 
-		const response = await fetch(joinUrl(options.baseUrl, path), { ...init, headers });
+		let response: Response;
+		try {
+			response = await fetch(joinUrl(options.baseUrl, path), { ...init, headers });
+		} catch (err) {
+			const reason = err instanceof Error ? err.message : "network error";
+			throw new ApiRequestError(0, `Cannot reach the API at ${options.baseUrl} (${reason})`);
+		}
 		const isAuthPath = path.startsWith("/api/auth/");
 
 		if (response.status === 401 && retry && !isAuthPath) {

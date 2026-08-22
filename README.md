@@ -127,7 +127,7 @@ Notextra/
    npm run mobile
    ```
 
-   Then open the Expo dev tools. iOS simulator can use `http://localhost:8080`; Android emulator typically needs `EXPO_PUBLIC_API_URL=http://10.0.2.2:8080`. Theme (light/dark + color palettes) is changed under Options.
+   Then open the Expo dev tools. iOS simulator can use `http://localhost:8080`. On a physical phone, `localhost` is rewritten to the same LAN host Metro uses so the app can reach the API on your computer — keep the phone and PC on the same network, and allow port 8080 if Windows Firewall prompts. Android emulator typically needs `EXPO_PUBLIC_API_URL=http://10.0.2.2:8080`. Theme (light/dark + color palettes) is changed under Options.
 
 ## Environment variables
 

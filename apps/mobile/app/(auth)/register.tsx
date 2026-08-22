@@ -1,4 +1,3 @@
-import { ApiRequestError } from "@notextra/api";
 import { Link, router } from "expo-router";
 import { useState } from "react";
 import { Text } from "react-native";
@@ -22,7 +21,7 @@ export default function RegisterScreen() {
 			await register(email, password, displayName);
 			router.replace("/(app)/notes");
 		} catch (err) {
-			setError(err instanceof ApiRequestError ? err.message : "Unable to register");
+			setError(err instanceof Error ? err.message : "Unable to register");
 		} finally {
 			setPending(false);
 		}

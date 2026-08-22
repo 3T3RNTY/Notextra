@@ -1,4 +1,3 @@
-import { ApiRequestError } from "@notextra/api";
 import { Link, router } from "expo-router";
 import { useState } from "react";
 import { Text } from "react-native";
@@ -21,7 +20,7 @@ export default function LoginScreen() {
 			await login(email, password);
 			router.replace("/(app)/notes");
 		} catch (err) {
-			setError(err instanceof ApiRequestError ? err.message : "Unable to sign in");
+			setError(err instanceof Error ? err.message : "Unable to sign in");
 		} finally {
 			setPending(false);
 		}
